@@ -28,6 +28,17 @@ instance : ToIpld Nat where
   fromIpld
   | Ipld.bytes x => Except.ok x.fromByteArrayBE
   | _ => Except.error (IpldError.Expected "Nat")
+instance : ToIpld Bool where
+  toIpld x := Ipld.bool x
+  fromIpld
+  | Ipld.bool x => Except.ok x
+  | _ => Except.error (IpldError.Expected "Bool")
+
+instance : ToIpld Cid where
+  toIpld x := Ipld.link x
+  fromIpld
+  | Ipld.link x => Except.ok x
+  | _ => Except.error (IpldError.Expected "Cid")
 
 def List.toIpldAux {α : Type} [inst : ToIpld α] (xs: List α): Ipld :=
   Ipld.array (Array.mk (xs.map (@ToIpld.toIpld α inst)))
