@@ -2,6 +2,8 @@ import Radiya.Ipld.Cid
 import Radiya.Ipld
 import Radiya.ToIpld
 
+namespace Radiya
+
 def LITERAL: UInt64 := 0xC0DE0000
 def NAME: UInt64 := 0x3E7A0000
 def UNIV: UInt64 := 0xC0DE0001
@@ -13,15 +15,15 @@ def CONSTMETA: UInt64 := 0x3E7A0003
 
 def ENV: UInt64 := 0xC0DE0004
 
-structure LitCid where data : Cid
-structure NameCid where data : Cid
-structure UnivCid where data : Cid
-structure UnivMetaCid where data : Cid
-structure ExprCid where data : Cid
-structure ExprMetaCid where data : Cid
-structure ConstCid where data : Cid
-structure ConstMetaCid where data : Cid
-structure EnvCid where data : Cid
+structure LitCid where data : Cid deriving BEq
+structure NameCid where data : Cid deriving BEq
+structure UnivCid where data : Cid deriving BEq
+structure UnivMetaCid where data : Cid deriving BEq
+structure ExprCid where data : Cid deriving BEq
+structure ExprMetaCid where data : Cid deriving BEq
+structure ConstCid where data : Cid deriving BEq
+structure ConstMetaCid where data : Cid deriving BEq
+structure EnvCid where data : Cid deriving BEq
 
 instance : ToIpld LitCid where
   toIpld n := Ipld.link n.data
@@ -33,6 +35,9 @@ instance : ToIpld LitCid where
 instance : ToString LitCid where
   toString x := toString x.data
 
+instance : Ord LitCid where
+  compare x y := compare x.data y.data
+
 instance : ToIpld NameCid where
   toIpld n := Ipld.link n.data
   fromIpld
@@ -42,6 +47,9 @@ instance : ToIpld NameCid where
 
 instance : ToString NameCid where
   toString x := toString x.data
+
+instance : Ord NameCid where
+  compare x y := compare x.data y.data
 
 instance : ToIpld UnivCid where
   toIpld n := Ipld.link n.data
@@ -53,12 +61,18 @@ instance : ToIpld UnivCid where
 instance : ToString UnivCid where
   toString x := toString x.data
 
+instance : Ord UnivCid where
+  compare x y := compare x.data y.data
+
 instance : ToIpld UnivMetaCid where
   toIpld n := Ipld.link n.data
   fromIpld
   | Ipld.link n => if n.codec == UNIVMETA.toNat then Except.ok (UnivMetaCid.mk n)
     else Except.error (IpldError.Expected "Universe Meta Cid")
   | _ => Except.error (IpldError.Expected "Universe Meta Cid")
+
+instance : Ord UnivMetaCid where
+  compare x y := compare x.data y.data
 
 instance : ToString UnivMetaCid where
   toString x := toString x.data
@@ -69,6 +83,9 @@ instance : ToIpld ExprCid where
   | Ipld.link n => if n.codec == EXPR.toNat then Except.ok (ExprCid.mk n)
     else Except.error (IpldError.Expected "Expression Cid")
   | _ => Except.error (IpldError.Expected "Expression Cid")
+
+instance : Ord ExprCid where
+  compare x y := compare x.data y.data
 
 instance : ToString ExprCid where
   toString x := toString x.data
@@ -83,6 +100,9 @@ instance : ToIpld ExprMetaCid where
 instance : ToString ExprMetaCid where
   toString x := toString x.data
 
+instance : Ord ExprMetaCid where
+  compare x y := compare x.data y.data
+
 instance : ToIpld ConstCid where
   toIpld n := Ipld.link n.data
   fromIpld
@@ -92,6 +112,9 @@ instance : ToIpld ConstCid where
 
 instance : ToString ConstCid where
   toString x := toString x.data
+
+instance : Ord ConstCid where
+  compare x y := compare x.data y.data
 
 instance : ToIpld ConstMetaCid where
   toIpld n := Ipld.link n.data
@@ -103,6 +126,9 @@ instance : ToIpld ConstMetaCid where
 instance : ToString ConstMetaCid where
   toString x := toString x.data
 
+instance : Ord ConstMetaCid where
+  compare x y := compare x.data y.data
+
 instance : ToIpld EnvCid where
   toIpld n := Ipld.link n.data
   fromIpld
@@ -112,3 +138,8 @@ instance : ToIpld EnvCid where
 
 instance : ToString EnvCid where
   toString x := toString x.data
+
+instance : Ord EnvCid where
+  compare x y := compare x.data y.data
+
+end Radiya

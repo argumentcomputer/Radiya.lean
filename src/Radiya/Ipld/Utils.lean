@@ -1,4 +1,5 @@
 import Std.Data.RBTree
+import Init.Data.Ord
 
 open Std (RBNode)
 
@@ -74,6 +75,28 @@ namespace Nat
 
 end Nat
 
+namespace List
+
+  def compareAux {α : Type u} [inst: Ord α] : List α → List α → Ordering
+  | [], [] => Ordering.eq
+  | [], _ => Ordering.lt
+  | _, [] => Ordering.gt
+  | x::xs, y::ys => match @compare α inst x y with
+    | Ordering.eq => compareAux xs ys
+    | other => other
+
+  instance {α : Type u} [inst: Ord α] : Ord (List α) where
+    compare := compareAux
+
+end List
+
+namespace Array
+
+  instance {α : Type u} [inst: Ord α] : Ord (Array α) where
+    compare x y := compare x.data y.data
+
+end Array
+
 namespace ByteArray
 
 def fromByteArrayLE (b: ByteArray) : Nat := Id.run do
@@ -102,16 +125,11 @@ def pushZeros (bytes: ByteArray): Nat → ByteArray
 | 0 => bytes
 | n+1 => pushZeros (bytes.push 0) n
 
-def parseUInt16 (bytes : ByteArray) : UInt16 :=
-  bytes.fromByteArrayBE.toUInt16
-
-def parseUInt32 (bytes : ByteArray) : UInt32 :=
-  bytes.fromByteArrayBE.toUInt32
-
-def parseUInt64 (bytes : ByteArray) : UInt64 :=
-  bytes.fromByteArrayBE.toUInt64
+instance : Ord ByteArray where
+  compare x y := compare x.data y.data
 
 end ByteArray
+
 
 namespace Subarray
 
@@ -127,5 +145,5 @@ def toList (map : RBNode α (fun _ => β)) : List (α × β) :=
 
 instance [BEq α] [BEq β] : BEq (RBNode α fun _ => β) where
   beq a b := RBNode.toList a == RBNode.toList b
-     
+
 end RBNode

@@ -3,6 +3,8 @@ import Radiya.Ipld.Multibase
 import Radiya.Ipld.Utils
 import Radiya.Ipld.UnsignedVarint
 
+import Init.Data.Ord
+
 structure Cid where
   version : Nat
   codec: Nat
@@ -25,6 +27,9 @@ def fromBytes (bytes : ByteArray) : Option Cid :=
   Option.bind (UnsignedVarint.fromVarInt bytes) $ fun (codec, bytes) =>
   Option.bind (Multihash.fromBytes bytes) $ fun hash =>
   some { version, codec, hash }
+
+instance : Ord Cid where
+  compare x y := compare x.toBytes y.toBytes
 
 namespace Test
 
