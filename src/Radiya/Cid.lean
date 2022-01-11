@@ -1,6 +1,6 @@
-import Ipld.Cid
-import Ipld.Ipld
-import Ipld.Lean.ToIpld
+import Radiya.Ipld.Cid
+import Radiya.Ipld
+import Radiya.ToIpld
 
 def LITERAL: UInt64 := 0xC0DE0000
 def NAME: UInt64 := 0x3E7A0000
