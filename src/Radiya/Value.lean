@@ -48,7 +48,7 @@ instance : Inhabited (Thunk Value) where
   default := Thunk.mk (fun _ => Value.sort Univ.zero)
 
 mutual
-  def eval (term : Term) (env : Env) (args : Args) : Value :=
+  partial def eval (term : Term) (env : Env) (args : Args) : Value :=
     match term with
     | Term.app fnc arg =>
       let thunk := Thunk.mk (fun _ => eval arg env [])
@@ -59,8 +59,25 @@ mutual
     | Term.var idx =>
       let thunk := List.get! env idx
       apply thunk.get args
-    | _ => panic! "todo"
-  
-  def apply (value : Value) (args : Args) : Value :=
-    panic! "todo"
+    | Term.const _ _ => panic! "TODO"
+    | Term.letE _ val bod =>
+      let thunk := Thunk.mk (fun _ => eval val env [])
+      eval bod (thunk :: env) args
+    | Term.fix bod =>
+      let thunk := Thunk.mk (fun _ => eval term env [])
+      eval bod (thunk :: env) args
+    -- Since terms are typed checked we know `args` must be empty for these last cases
+    | Term.pi dom img =>
+      let dom := Thunk.mk (fun _ => eval dom env [])
+      Value.pi dom img env
+    | Term.sort univ => Value.sort univ
+    | Term.lit lit => Value.lit lit
+
+  partial def apply (value : Value) (args : Args) : Value :=
+    match args with
+    | [] => value
+    | arg :: args' => match value with
+      | Value.lam bod env => eval bod (arg :: env) args'
+      | Value.app neu args' => Value.app neu (List.append args' args)
+      | _ => panic! "Impossible"
 end
