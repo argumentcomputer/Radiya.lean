@@ -47,40 +47,32 @@ def Args := List (Thunk Value)
 instance : Inhabited (Thunk Value) where
   default := Thunk.mk (fun _ => Value.sort Univ.zero)
 
-mutual
-  partial def eval (term : Term) (env : Env) (args : Args) : Value :=
-    match term with
-    | Term.app fnc arg =>
-      let thunk := Thunk.mk (fun _ => eval arg env [])
-      eval fnc env (thunk :: args)
-    | Term.lam _ bod => match args with
-      | [] => Value.lam bod env
-      | arg :: args => eval bod (arg :: env) args
-    | Term.var idx =>
-      let thunk := List.get! env idx
-      apply thunk.get args
-    | Term.const _ _ => panic! "TODO"
-    | Term.letE _ val bod =>
-      let thunk := Thunk.mk (fun _ => eval val env [])
-      eval bod (thunk :: env) args
-    | Term.fix bod =>
-      let thunk := Thunk.mk (fun _ => eval term env [])
-      eval bod (thunk :: env) args
-    -- Since terms are typed checked we know `args` must be empty for these last cases
-    | Term.pi dom img =>
-      let dom := Thunk.mk (fun _ => eval dom env [])
-      Value.pi dom img env
-    | Term.sort univ => Value.sort univ
-    | Term.lit lit => Value.lit lit
-
-  partial def apply (value : Value) (args : Args) : Value :=
-    match args with
-    | [] => value
-    | arg :: args' => match value with
-      | Value.lam bod env => eval bod (arg :: env) args'
-      | Value.app neu args' => Value.app neu (List.append args' args)
-      | _ => panic! "Impossible"
-end
+partial def eval (term : Term) (env : Env) : Value :=
+  match term with
+  | Term.app fnc arg =>
+    let thunk := Thunk.mk (fun _ => eval arg env)
+    match eval fnc env with
+    | Value.lam bod lam_env => eval bod (thunk :: lam_env)
+    | Value.app (Neutral.var idx) args => Value.app (Neutral.var idx) (thunk :: args)
+    | Value.app (Neutral.const _ _) _ => panic! "TODO"
+    -- Since terms are typed checked we know that any other case is impossible
+    | _ => panic! "Impossible"
+  | Term.lam _ bod => Value.lam bod env
+  | Term.var idx =>
+    let thunk := List.get! env idx
+    thunk.get
+  | Term.const _ _ => panic! "TODO"
+  | Term.letE _ val bod =>
+    let thunk := Thunk.mk (fun _ => eval val env)
+    eval bod (thunk :: env)
+  | Term.fix bod =>
+    ket thunk := Thunk.mk (fun _ => eval term env)
+    eval bod (thunk :: env)
+  | Term.pi dom img =>
+    let dom := Thunk.mk (fun _ => eval dom env)
+    Value.pi dom img env
+  | Term.sort univ => Value.sort univ
+  | Term.lit lit => Value.lit lit
 
 def equal_univ (u u' : Univ) : Bool :=
   panic! "TODO"
@@ -110,10 +102,10 @@ mutual
     | Value.pi dom img env, Value.pi dom' img' env' =>
       let var := Value.app (Neutral.var lvl) []
       equal lvl dom.get dom'.get &&
-      equal (lvl + 1) (eval img (var :: env) []) (eval img' (var :: env') [])
+      equal (lvl + 1) (eval img (var :: env)) (eval img' (var :: env'))
     | Value.lam bod env, Value.lam bod' env' =>
       let var := Value.app (Neutral.var lvl) []
-      equal (lvl + 1) (eval bod (var :: env) []) (eval bod' (var :: env') [])
+      equal (lvl + 1) (eval bod (var :: env)) (eval bod' (var :: env'))
     | Value.lam bod env, Value.app neu' args' => panic! "TODO"
     | Value.app neu' args', Value.lam bod' env' => panic! "TODO"
     | _, _ => false
