@@ -66,7 +66,7 @@ partial def eval (term : Term) (env : Env) : Value :=
     let thunk := Thunk.mk (fun _ => eval val env)
     eval bod (thunk :: env)
   | Term.fix bod =>
-    ket thunk := Thunk.mk (fun _ => eval term env)
+    let thunk := Thunk.mk (fun _ => eval term env)
     eval bod (thunk :: env)
   | Term.pi dom img =>
     let dom := Thunk.mk (fun _ => eval dom env)
