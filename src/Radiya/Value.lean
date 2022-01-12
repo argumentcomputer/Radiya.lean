@@ -81,3 +81,37 @@ mutual
       | Value.app neu args' => Value.app neu (List.append args' args)
       | _ => panic! "Impossible"
 end
+
+def equal_univ (u : Univ) (u' : Univ) : Bool :=
+  panic! "TODO"
+
+def equal_univs (us : List Univ) (us' : List Univ) : Bool :=
+  match us, us' with
+  | [], [] => true
+  | u::us, u'::us' => equal_univ u u' && equal_univs us us'
+  | _, _ => false
+
+def equal_const (k : ConstVal) (k' : ConstVal) : Bool :=
+  panic! "TODO"
+
+def equal_neu (n : Neutral) (n' : Neutral) : Bool :=
+  match n, n' with
+  | Neutral.var idx, Neutral.var idx' => idx == idx'
+  | Neutral.const k us, Neutral.const k' us' =>
+    equal_const k k' && equal_univs us us'
+  | _, _ => false
+
+partial def equal (lvl : Nat) (term : Value) (term' : Value) : Bool :=
+  match term, term' with
+  | Value.sort u, Value.sort u' => equal_univ u u'
+  | Value.pi dom img env, Value.pi dom' img' env' =>
+    let var := Value.app (Neutral.var lvl) []
+    equal lvl dom.get dom'.get &&
+    equal (lvl + 1) (eval img (var :: env) []) (eval img' (var :: env') [])
+  | Value.lam bod env, Value.lam bod' env' =>
+    let var := Value.app (Neutral.var lvl) []
+    equal (lvl + 1) (eval bod (var :: env) []) (eval bod' (var :: env') [])
+  | Value.lam bod env, _ => panic! "TODO"
+  | _, Value.lam bod' env' => panic! "TODO"
+  | _, _ => panic! "TODO"
+
