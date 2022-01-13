@@ -1,7 +1,11 @@
-import Radiya.Const
-open Lean (Literal)
+import Radiya.Ipld.Cid
+
+import Lean.Declaration
+open Lean (Literal DefinitionSafety QuotKind)
 
 namespace Radiya
+
+def Name := String
 
 inductive Univ where
 | zero
@@ -10,24 +14,47 @@ inductive Univ where
 | imax : Univ → Univ → Univ
 | param : Nat → Univ
 
-inductive Term where
-| var   : Nat → Term
-| sort  : Univ → Term
-| const : Const → List Univ → Term
-| app   : Term → Term → Term
-| lam   : Term → Term → Term
-| pi    : Term → Term → Term
-| letE  : Term → Term → Term → Term
-| lit   : Literal → Term
-| fix   : Term → Term
-deriving Inhabited
+-- Lean does not support mutual blocks with structure and inductive, so we have to parametrize
+-- the following structures
+structure RecRule (Term : Type) where
+  ctor : Name
+  fields : Nat
+  rhs : Term
+
+structure Intro (Term : Type) where
+  ctor : Name
+  typ : Term
+
+mutual
+  inductive Const where
+  | quotient : Nat → Term → QuotKind → Const
+  | axiomC   : Nat → Term → Bool → Cid → Const
+  | theoremC : Nat → Term → Term → Const
+  | opaque   : Nat → Term → Term → Bool → Cid → Const
+  | defn     : Nat → Term → Term → DefinitionSafety → Const
+  | induct   : Nat → Term → Nat → Nat → List (Intro Term) → Bool → Const
+  | ctor     : Nat → Term → Const → Nat → Nat → Nat → Bool → Const
+  | recursor : Nat → Term → Const → Nat → Nat → Nat → Nat → List (RecRule Term) → Bool → Bool → Const
+  
+  inductive Term where
+  | var   : Nat → Term
+  | sort  : Univ → Term
+  | const : Const → List Univ → Term
+  | app   : Term → Term → Term
+  | lam   : Term → Term → Term
+  | pi    : Term → Term → Term
+  | letE  : Term → Term → Term → Term
+  | lit   : Literal → Term
+  | fix   : Term → Term
+  deriving Inhabited
+end
 
 inductive ConstVal where
 | axiomC   : Nat → Cid → ConstVal
 | opaque   : Nat → Cid → ConstVal
-| induct   : Nat → Nat → Nat → List Intro → Bool → ConstVal
+| induct   : Nat → Nat → Nat → List (Intro Term) → Bool → ConstVal
 | ctor     : Nat → ConstVal → Nat → Nat → Nat → Bool → ConstVal
-| recursor : Nat → ConstVal → Nat → Nat → Nat → Nat → List RecRule → Bool → Bool → ConstVal
+| recursor : Nat → ConstVal → Nat → Nat → Nat → Nat → List (RecRule Term) → Bool → Bool → ConstVal
 | quotType : Nat → ConstVal
 | quotCtor : Nat → ConstVal
 | quotLift : Nat → ConstVal
