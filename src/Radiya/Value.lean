@@ -1,60 +1,17 @@
 import Radiya.Ipld.Cid
+import Radiya.Univ
+import Radiya.Expr
 
-import Lean.Declaration
-open Lean (Literal DefinitionSafety QuotKind)
+open Lean (Literal)
 
 namespace Radiya
-
-def Name := String
-
-inductive Univ where
-| zero
-| succ : Univ → Univ
-| max : Univ → Univ → Univ
-| imax : Univ → Univ → Univ
-| param : Nat → Univ
-
--- Lean does not support mutual blocks with structure and inductive, so we have to parametrize
--- the following structures
-structure RecRule (Term : Type) where
-  ctor : Name
-  fields : Nat
-  rhs : Term
-
-structure Intro (Term : Type) where
-  ctor : Name
-  typ : Term
-
-mutual
-  inductive Const where
-  | quotient : Nat → Term → QuotKind → Const
-  | axiomC   : Nat → Term → Bool → Cid → Const
-  | theoremC : Nat → Term → Term → Const
-  | opaque   : Nat → Term → Term → Bool → Cid → Const
-  | defn     : Nat → Term → Term → DefinitionSafety → Const
-  | induct   : Nat → Term → Nat → Nat → List (Intro Term) → Bool → Const
-  | ctor     : Nat → Term → Const → Nat → Nat → Nat → Bool → Const
-  | recursor : Nat → Term → Const → Nat → Nat → Nat → Nat → List (RecRule Term) → Bool → Bool → Const
-  
-  inductive Term where
-  | var   : Nat → Term
-  | sort  : Univ → Term
-  | const : Const → List Univ → Term
-  | app   : Term → Term → Term
-  | lam   : Term → Term → Term
-  | pi    : Term → Term → Term
-  | letE  : Term → Term → Term → Term
-  | lit   : Literal → Term
-  | fix   : Term → Term
-  deriving Inhabited
-end
 
 inductive ConstVal where
 | axiomC   : Nat → Cid → ConstVal
 | opaque   : Nat → Cid → ConstVal
-| induct   : Nat → Nat → Nat → List (Intro Term) → Bool → ConstVal
+| induct   : Nat → Nat → Nat → List (Intro Expr) → Bool → ConstVal
 | ctor     : Nat → ConstVal → Nat → Nat → Nat → Bool → ConstVal
-| recursor : Nat → ConstVal → Nat → Nat → Nat → Nat → List (RecRule Term) → Bool → Bool → ConstVal
+| recursor : Nat → ConstVal → Nat → Nat → Nat → Nat → List (RecRule Expr) → Bool → Bool → ConstVal
 | quotType : Nat → ConstVal
 | quotCtor : Nat → ConstVal
 | quotLift : Nat → ConstVal
@@ -69,8 +26,8 @@ deriving Inhabited
 inductive Value where
 | sort  : Univ → Value
 | app   : Neutral → List (Thunk Value) → Value
-| lam   : Term → List (Thunk Value) → Value
-| pi    : Thunk Value → Term → List (Thunk Value) → Value
+| lam   : Expr → List (Thunk Value) → Value
+| pi    : Thunk Value → Expr → List (Thunk Value) → Value
 | lit   : Literal → Value
 deriving Inhabited
 
@@ -83,9 +40,9 @@ instance : Inhabited (Thunk Value) where
 def mkVar (idx : Nat) : Value :=
   Value.app (Neutral.var idx) []
 
-partial def eval (term : Term) (env : Env) : Value :=
+partial def eval (term : Expr) (env : Env) : Value :=
   match term with
-  | Term.app fnc arg =>
+  | Expr.app fnc arg =>
     let thunk := Thunk.mk (fun _ => eval arg env)
     match eval fnc env with
     | Value.lam bod lam_env => eval bod (thunk :: lam_env)
@@ -93,24 +50,24 @@ partial def eval (term : Term) (env : Env) : Value :=
     | Value.app (Neutral.const _ _) _ => panic! "TODO"
     -- Since terms are typed checked we know that any other case is impossible
     | _ => panic! "Impossible"
-  | Term.lam _ bod => Value.lam bod env
-  | Term.var idx =>
+  | Expr.lam _ bod => Value.lam bod env
+  | Expr.var idx =>
     let thunk := List.get! env idx
     thunk.get
-  | Term.const _ _ => panic! "TODO"
-  | Term.letE _ val bod =>
+  | Expr.const _ _ => panic! "TODO"
+  | Expr.letE _ val bod =>
     let thunk := Thunk.mk (fun _ => eval val env)
     eval bod (thunk :: env)
-  | Term.fix bod =>
+  | Expr.fix bod =>
     let thunk := Thunk.mk (fun _ => eval term env)
     eval bod (thunk :: env)
-  | Term.pi dom img =>
+  | Expr.pi dom img =>
     let dom := Thunk.mk (fun _ => eval dom env)
     Value.pi dom img env
-  | Term.sort univ => Value.sort univ
-  | Term.lit lit => Value.lit lit
+  | Expr.sort univ => Value.sort univ
+  | Expr.lit lit => Value.lit lit
 
-def quote (lvl : Nat) (val : Value) : Term :=
+def quote (lvl : Nat) (val : Value) : Expr :=
   panic! "TODO"
 
 def equal_univ (u u' : Univ) : Bool :=
@@ -192,18 +149,18 @@ instance : Monad CheckError where
   | CheckError.cannotInferFix => CheckError.cannotInferFix
 
 mutual
-  partial def check (ctx : Ctx) (term : Term) (type : Value) : CheckError Unit :=
+  partial def check (ctx : Ctx) (term : Expr) (type : Value) : CheckError Unit :=
     match term, type with
-    | Term.lam lam_dom bod, Value.pi dom img env =>
+    | Expr.lam lam_dom bod, Value.pi dom img env =>
       -- TODO check that `lam_dom` == `dom`
       -- though this is wasteful, since this would force
       -- `dom`, which might not need to be evaluated.
       let var := mkVar ctx.lvl
       let ctx := extCtx ctx var dom
       check ctx bod (eval img (var :: env))
-    | Term.lam _ _, _ =>
+    | Expr.lam _ _, _ =>
       CheckError.notPi
-    | Term.letE typ exp bod, let_typ => do
+    | Expr.letE typ exp bod, let_typ => do
       let sort ← infer ctx typ
       match sort with
       | Value.sort u => pure ()
@@ -214,7 +171,7 @@ mutual
       let typ := Thunk.mk (fun _ => typ)
       let ctx := extCtx ctx exp typ
       check ctx bod let_typ
-    | Term.fix bod, type =>
+    | Expr.fix bod, type =>
       let ctx := extCtx ctx (Thunk.mk (fun _ => eval term ctx.env)) type
       check ctx bod type
     | term, type => do
@@ -223,15 +180,15 @@ mutual
       then pure ()
       else CheckError.notSameValues
 
-  partial def infer (ctx : Ctx) (term : Term) : CheckError Value :=
+  partial def infer (ctx : Ctx) (term : Expr) : CheckError Value :=
     match term with
-    | Term.var idx =>
+    | Expr.var idx =>
       let type := List.get! ctx.types idx
       pure type.get
-    | Term.sort lvl =>
+    | Expr.sort lvl =>
       let type := Value.sort (Univ.succ lvl)
       pure type
-    | Term.app fnc arg => do
+    | Expr.app fnc arg => do
       let fnc_typ ← infer ctx fnc
       match fnc_typ with
       | Value.pi dom img env => do
@@ -240,7 +197,7 @@ mutual
         let type := eval img (arg :: env)
         pure type
       | _ => CheckError.notPi
-    | Term.lam dom bod => do
+    | Expr.lam dom bod => do
       match infer ctx dom with
         | Value.sort u => pure ()
         | _ => CheckError.notTyp
@@ -249,7 +206,7 @@ mutual
       let bod_type ← infer ctx bod
       let img := quote ctx.lvl bod_type
       Value.pi dom img ctx.env
-    | Term.pi dom img  => do
+    | Expr.pi dom img  => do
       let dom_lvl ← match infer ctx dom with
         | Value.sort u => pure u
         | _ => CheckError.notTyp
@@ -258,7 +215,7 @@ mutual
         | Value.sort u => pure u
         | _ => CheckError.notTyp
       pure (Value.sort (Univ.imax dom_lvl img_lvl))
-    | Term.letE typ exp bod => do
+    | Expr.letE typ exp bod => do
       let sort ← infer ctx typ
       match sort with
       | Value.sort u => pure ()
@@ -269,8 +226,10 @@ mutual
       let typ := Thunk.mk (fun _ => typ)
       let ctx := extCtx ctx exp typ
       infer ctx bod
-    | Term.fix _ =>
+    | Expr.fix _ =>
       CheckError.cannotInferFix
-    | Term.lit _ => panic! "TODO"
-    | Term.const _ _ => panic! "TODO"
+    | Expr.lit _ => panic! "TODO"
+    | Expr.const _ _ => panic! "TODO"
 end
+
+end Radiya
