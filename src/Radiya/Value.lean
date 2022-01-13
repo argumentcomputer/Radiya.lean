@@ -70,31 +70,22 @@ partial def eval (term : Expr) (env : Env) : Value :=
 def quote (lvl : Nat) (val : Value) : Expr :=
   panic! "TODO"
 
-def equal_univ (u u' : Univ) : Bool :=
+def equalConst (k k' : ConstVal) : Bool :=
   panic! "TODO"
 
-def equal_univs (us us' : List Univ) : Bool :=
-  match us, us' with
-  | [], [] => true
-  | u::us, u'::us' => equal_univ u u' && equal_univs us us'
-  | _, _ => false
-
-def equal_const (k k' : ConstVal) : Bool :=
-  panic! "TODO"
-
-def equal_neu (n n' : Neutral) : Bool :=
+def equalNeu (n n' : Neutral) : Bool :=
   match n, n' with
   | Neutral.var idx, Neutral.var idx' => idx == idx'
   | Neutral.const k us, Neutral.const k' us' =>
-    equal_const k k' && equal_univs us us'
+    equalConst k k' && equalUnivs us us'
   | _, _ => false
 
 mutual
   partial def equal (lvl : Nat) (term term' : Value) : Bool :=
     match term, term' with
     | Value.lit lit, Value.lit lit' => lit == lit'
-    | Value.sort u, Value.sort u' => equal_univ u u'
-    | Value.app neu args, Value.app neu' args' => equal_neu neu neu' && equal_thunks lvl args args'
+    | Value.sort u, Value.sort u' => equalUniv u u'
+    | Value.app neu args, Value.app neu' args' => equalNeu neu neu' && equalThunks lvl args args'
     | Value.pi dom img env, Value.pi dom' img' env' =>
       let var := mkVar lvl
       equal lvl dom.get dom'.get &&
@@ -110,10 +101,10 @@ mutual
       equal (lvl + 1) (Value.app neu (var :: args)) (eval bod' (var :: env'))
     | _, _ => false
 
-  partial def equal_thunks (lvl : Nat) (vals vals' : List (Thunk Value)) : Bool :=
+  partial def equalThunks (lvl : Nat) (vals vals' : List (Thunk Value)) : Bool :=
     match vals, vals' with
     | [], [] => true
-    | val::vals, val'::vals' => equal lvl val.get val'.get && equal_thunks lvl vals vals'
+    | val::vals, val'::vals' => equal lvl val.get val'.get && equalThunks lvl vals vals'
     | _, _ => false
 end
 
