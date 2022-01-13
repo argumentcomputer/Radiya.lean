@@ -1,6 +1,6 @@
 import Radiya.Ipld.Ipld
 import Radiya.Ipld.Cid
-import Radiya.Cid
+import Radiya.Content.Cid
 import Radiya.Ipld.Multihash
 import Radiya.Ipld.DagCbor
 import Radiya.ToIpld
@@ -9,7 +9,7 @@ import Lean.Expr
 
 open Lean (BinderInfo Literal)
 
-namespace Radiya
+namespace Radiya.Content
 
 inductive Expr where
 | var   : Nat → Expr
@@ -110,4 +110,4 @@ instance : ToIpld ExprMeta where
   | array #[number EXPRMETA, number 8, n, b]       => ExprMeta.fix <$> fromIpld n <*> fromIpld b
   | _ => throw (IpldError.Expected "ExprMeta")
 
-end Radiya
+end Radiya.Content

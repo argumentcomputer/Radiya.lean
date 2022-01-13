@@ -1,6 +1,6 @@
 import Radiya.Ipld
 import Radiya.ToIpld
-import Radiya.Content.Cid
+import Radiya.Content
 import Radiya.Value
 
 

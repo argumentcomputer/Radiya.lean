@@ -1,11 +1,11 @@
 import Radiya.Ipld.Ipld
 import Radiya.Ipld.Cid
-import Radiya.Cid
+import Radiya.Content.Cid
 import Radiya.Ipld.Multihash
 import Radiya.Ipld.DagCbor
 import Radiya.ToIpld
 
-namespace Radiya
+namespace Radiya.Content
 
 inductive Univ where
 | zero
@@ -56,4 +56,4 @@ instance : ToIpld UnivMeta where
   | array #[number UNIVMETA, number 4, n]    => UnivMeta.param <$> fromIpld n
   | _ => throw (IpldError.Expected "UnivMeta")
 
-end Radiya
+end Radiya.Content

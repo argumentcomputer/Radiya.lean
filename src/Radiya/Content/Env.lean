@@ -3,10 +3,10 @@ import Radiya.Ipld.Cid
 import Radiya.Ipld.Multihash
 import Radiya.Ipld.DagCbor
 import Radiya.ToIpld
-import Radiya.Cid
-import Radiya.Name
-import Radiya.Univ
-import Radiya.Expr
+import Radiya.Content.Cid
+import Radiya.Content.Name
+import Radiya.Content.Univ
+import Radiya.Content.Expr
 
 import Lean
 import Lean.Expr
@@ -17,7 +17,7 @@ open Lean (Literal)
 
 open Std (RBNode)
 
-namespace Radiya
+namespace Radiya.Content
 
 structure Env where
   lit : RBNode LitCid (fun _ => Literal)
@@ -29,4 +29,4 @@ structure Env where
   const : RBNode ExprCid (fun _ => Expr)
   constMeta : RBNode ExprMetaCid (fun _ => ExprMeta)
 
-end Radiya
+end Radiya.Content

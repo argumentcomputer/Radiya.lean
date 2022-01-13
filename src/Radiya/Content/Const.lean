@@ -1,6 +1,6 @@
 import Radiya.Ipld.Ipld
 import Radiya.Ipld.Cid
-import Radiya.Cid
+import Radiya.Content.Cid
 import Radiya.Ipld.Multihash
 import Radiya.Ipld.DagCbor
 import Radiya.ToIpld
@@ -9,7 +9,7 @@ import Lean.Declaration
 
 open Lean (QuotKind DefinitionSafety)
 
-namespace Radiya
+namespace Radiya.Content
 
 structure RecRule where
   ctor : NameCid
@@ -152,4 +152,4 @@ instance : ToIpld ConstMeta where
     ConstMeta.ctor <$> fromIpld n <*> fromIpld l <*> fromIpld t <*> fromIpld rs
   | _ => throw (IpldError.Expected "ConstMeta")
 
-end Radiya
+end Radiya.Content
