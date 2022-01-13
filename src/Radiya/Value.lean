@@ -83,6 +83,9 @@ partial def eval (term : Term) (env : Env) : Value :=
   | Term.sort univ => Value.sort univ
   | Term.lit lit => Value.lit lit
 
+def quote (lvl : Nat) (val : Value) : Term :=
+  panic! "TODO"
+
 def equal_univ (u u' : Univ) : Bool :=
   panic! "TODO"
 
@@ -135,6 +138,7 @@ inductive CheckError (A : Type) where
 | notPi : CheckError A
 | notTyp : CheckError A
 | notSameValues : CheckError A
+| cannotInferFix : CheckError A
 deriving Inhabited
 
 structure Ctx where
@@ -152,11 +156,13 @@ instance : Monad CheckError where
   | CheckError.notPi => CheckError.notPi
   | CheckError.notTyp => CheckError.notTyp
   | CheckError.notSameValues => CheckError.notSameValues
+  | CheckError.cannotInferFix => CheckError.cannotInferFix
   map f x := match x with
   | CheckError.ok y => CheckError.ok (f y)
   | CheckError.notPi => CheckError.notPi
   | CheckError.notTyp => CheckError.notTyp
   | CheckError.notSameValues => CheckError.notSameValues
+  | CheckError.cannotInferFix => CheckError.cannotInferFix
 
 mutual
   partial def check (ctx : Ctx) (term : Term) (type : Value) : CheckError Unit :=
@@ -181,11 +187,63 @@ mutual
       let typ := Thunk.mk (fun _ => typ)
       let ctx := extCtx ctx exp typ
       check ctx bod let_typ
+    | Term.fix bod, type =>
+      let ctx := extCtx ctx (Thunk.mk (fun _ => eval term ctx.env)) type
+      check ctx bod type
     | term, type => do
       let infer_type ← infer ctx term
       if equal ctx.lvl type infer_type
-      then CheckError.ok ()
+      then pure ()
       else CheckError.notSameValues
+
   partial def infer (ctx : Ctx) (term : Term) : CheckError Value :=
-    panic! "TODO"
+    match term with
+    | Term.var idx =>
+      let type := List.get! ctx.types idx
+      pure type.get
+    | Term.sort lvl =>
+      let type := Value.sort (Univ.succ lvl)
+      pure type
+    | Term.app fnc arg => do
+      let fnc_typ ← infer ctx fnc
+      match fnc_typ with
+      | Value.pi dom img env => do
+        check ctx arg dom.get
+        let arg := Thunk.mk (fun _ => eval arg ctx.env)
+        let type := eval img (arg :: env)
+        pure type
+      | _ => CheckError.notPi
+    | Term.lam dom bod => do
+      match infer ctx dom with
+        | Value.sort u => pure ()
+        | _ => CheckError.notTyp
+      let dom := Thunk.mk (fun _ => eval dom ctx.env)
+      let ctx := extCtx ctx (mkVar ctx.lvl) dom
+      let bod_type ← infer ctx bod
+      let img := quote ctx.lvl bod_type
+      Value.pi dom img ctx.env
+    | Term.pi dom img  => do
+      let dom_lvl ← match infer ctx dom with
+        | Value.sort u => pure u
+        | _ => CheckError.notTyp
+      let ctx := extCtx ctx (mkVar ctx.lvl) (Thunk.mk (fun _ => eval dom ctx.env))
+      let img_lvl ← match infer ctx img with
+        | Value.sort u => pure u
+        | _ => CheckError.notTyp
+      pure (Value.sort (Univ.imax dom_lvl img_lvl))
+    | Term.letE typ exp bod => do
+      let sort ← infer ctx typ
+      match sort with
+      | Value.sort u => pure ()
+      | _ => CheckError.notTyp
+      let typ := eval typ ctx.env
+      check ctx exp typ
+      let exp := Thunk.mk (fun _ => eval exp ctx.env)
+      let typ := Thunk.mk (fun _ => typ)
+      let ctx := extCtx ctx exp typ
+      infer ctx bod
+    | Term.fix _ =>
+      CheckError.cannotInferFix
+    | Term.lit _ => panic! "TODO"
+    | Term.const _ _ => panic! "TODO"
 end
