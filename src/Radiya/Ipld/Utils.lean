@@ -88,6 +88,32 @@ namespace List
   instance {α : Type u} [inst: Ord α] : Ord (List α) where
     compare := compareAux
 
+  mutual
+  partial def mergesort' {α : Type u} (cmp: α -> α -> Ordering): List (List α) → List α
+  | [] => []
+  | [xs] => xs
+  | xss => mergesort' cmp (merge_pairs cmp xss)
+
+  partial def merge_pairs {α : Type u} (cmp: α -> α -> Ordering): List (List α) → List (List α)
+  | [] => []
+  | [xs] => [xs]
+  | xs::ys::xss => merge cmp xs ys :: merge_pairs cmp xss
+
+  partial def merge {α : Type u} (cmp: α -> α -> Ordering): List α → List α -> List α 
+  | [], ys => ys
+  | xs, [] => xs
+  | x::xs, y::ys => match cmp x y with
+    | Ordering.gt => y :: merge cmp (x::xs) ys
+    | _ => x :: merge cmp xs (y::ys)
+  end
+
+  def mergesort {α : Type u} [inst: Ord α] (xs: List α) : List α :=
+    mergesort' (@compare α inst) (map (fun x => [x]) xs)
+
+  def mergesortBy {α : Type u} (cmp: α -> α -> Ordering) (xs: List α) : List α :=
+    mergesort' cmp (map (fun x => [x]) xs)
+
+
 end List
 
 namespace Array

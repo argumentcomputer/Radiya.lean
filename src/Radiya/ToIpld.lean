@@ -3,6 +3,7 @@ import Radiya.Ipld.Cid
 import Radiya.Ipld.Multihash
 import Radiya.Ipld.DagCbor
 
+open Std (RBNode)
 
 inductive IpldError where
 | Expected (x: String)
@@ -28,6 +29,7 @@ instance : ToIpld Nat where
   fromIpld
   | Ipld.bytes x => Except.ok x.fromByteArrayBE
   | _ => Except.error (IpldError.Expected "Nat")
+
 instance : ToIpld Bool where
   toIpld x := Ipld.bool x
   fromIpld
@@ -51,3 +53,13 @@ instance List.ToIpld {α : Type} [inst : ToIpld α] : ToIpld (List α) where
   fromIpld
   | Ipld.array x => List.fromIpldAux x
   | _ => Except.error (IpldError.Expected "Array")
+
+instance {α β : Type} [ToIpld α] [ToIpld β] : ToIpld (α × β) where
+  toIpld xy := Ipld.array #[ToIpld.toIpld xy.1, ToIpld.toIpld 2]
+  fromIpld
+  | Ipld.array #[x, y] => do
+    let x <- ToIpld.fromIpld x
+    let y <- ToIpld.fromIpld y
+    return (x, y)
+  | _ => Except.error (IpldError.Expected "Pair")
+

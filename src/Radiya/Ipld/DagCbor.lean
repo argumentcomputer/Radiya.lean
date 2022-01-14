@@ -84,11 +84,12 @@ partial def ser_array (a: Array Ipld) : ByteArray := Id.run do
   self
 
 partial def ser_object (o: RBNode String (fun _ => Ipld)) : ByteArray := Id.run do
-  let list := nodeToList o
+  let list := List.map (fun (k,v) => (ser_string k, serialize v)) (nodeToList o)
+  let list := List.mergesortBy (fun (k,v) (k',v') => compare k k') list
   let mut self := ser_u64 5 list.length.toUInt64
   for (k, v) in list do
-    self := self.append (ser_string k)
-    self := self.append (serialize v)
+    self := self.append k
+    self := self.append v
   self
 end
 
