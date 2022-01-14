@@ -1,11 +1,11 @@
 import Radiya.Ipld.Ipld
 import Radiya.Ipld.Cid
-import Radiya.Cid
 import Radiya.Ipld.Multihash
 import Radiya.Ipld.DagCbor
-import Radiya.ToIpld
+import Radiya.Content.Cid
+import Radiya.Content.ToIpld
 
-namespace Radiya
+namespace Radiya.Content
 
 inductive Name where
 | anon
@@ -33,4 +33,4 @@ end Name
 
 
 
-end Radiya
+end Radiya.Content

@@ -1,59 +1,82 @@
-import Radiya.Ipld.Ipld
-import Radiya.Ipld.Cid
-import Radiya.Cid
-import Radiya.Ipld.Multihash
-import Radiya.Ipld.DagCbor
-import Radiya.ToIpld
-
 namespace Radiya
 
 inductive Univ where
 | zero
-| succ : UnivCid → Univ
-| max : UnivCid → UnivCid → Univ
-| imax : UnivCid → UnivCid → Univ
+| succ : Univ → Univ
+| max : Univ → Univ → Univ
+| imax : Univ → Univ → Univ
 | param : Nat → Univ
+deriving Inhabited, BEq
 
-open ToIpld
-open Ipld
+def instantiateUniv (u : Univ) (idx : Nat)(subst : Univ) : Univ :=
+  match u with
+  | Univ.succ u => Univ.succ (instantiateUniv u idx subst)
+  | Univ.max a b => Univ.max (instantiateUniv a idx subst) (instantiateUniv b idx subst)
+  | Univ.imax a b => Univ.imax (instantiateUniv a idx subst) (instantiateUniv b idx subst)
+  | Univ.param idx' => if idx == idx' then subst else u
+  | Univ.zero => u
 
-instance : ToIpld Univ where
-  toIpld
-  | Univ.zero     => array #[number UNIV, number 0]
-  | Univ.succ p   => array #[number UNIV, number 1, toIpld p]
-  | Univ.max x y  => array #[number UNIV, number 2, toIpld x, toIpld y]
-  | Univ.imax x y => array #[number UNIV, number 3, toIpld x, toIpld y]
-  | Univ.param i  => array #[number UNIV, number 4, toIpld i]
+def combining (a b : Univ) : Univ :=
+  match a, b with
+  | Univ.zero, _ => b
+  | _, Univ.zero => a
+  | Univ.succ a, Univ.succ b => Univ.succ (combining a b)
+  | _, _ => Univ.max a b
 
-  fromIpld
-  | array #[number UNIV, number 0]       => Univ.zero
-  | array #[number UNIV, number 1, p]    => Univ.succ <$> fromIpld p
-  | array #[number UNIV, number 2, x, y] => Univ.max <$> fromIpld x <*> fromIpld y
-  | array #[number UNIV, number 3, x, y] => Univ.imax <$> fromIpld x <*> fromIpld y
-  | array #[number UNIV, number 4, i]    => Univ.param <$> fromIpld i
-  | _ => throw (IpldError.Expected "Univ")
+def simplify (u : Univ) : Univ :=
+  match u with
+  | Univ.succ u' => Univ.succ (simplify u')
+  | Univ.max a b => Univ.max (simplify a) (simplify b)
+  | Univ.imax a b =>
+    let b_prime := simplify b
+    match b_prime with
+    | Univ.zero => Univ.zero
+    | Univ.succ _ => combining (simplify a) b_prime
+    | _ => Univ.imax (simplify a) b_prime
+  | _ => u
 
-inductive UnivMeta where
-| zero
-| succ : UnivMetaCid → UnivMeta
-| max : UnivMetaCid → UnivMetaCid → UnivMeta
-| imax : UnivMetaCid → UnivMetaCid → UnivMeta
-| param : NameCid → UnivMeta
+partial def leqCore (a b : Univ) (diff : Int) : Bool :=
+  if a == b && diff >= 0 then true
+  else match a, b with
+  | Univ.zero, Univ.zero => diff >= 0
+  | Univ.param x, Univ.param y => x == y && diff >= 0
+  | Univ.zero, Univ.param _ => diff >= 0
+  | Univ.param _, Univ.zero => false
+  | Univ.succ a, _ => leqCore a b (diff - 1)
+  | _, Univ.succ b => leqCore a b (diff + 1)
+  | Univ.max a₁ a₂, b => leqCore a₁ b diff && leqCore a₂ b diff
+  | a, Univ.max b₁ b₂ => leqCore a b₁ diff || leqCore a b₂ diff
+  | Univ.imax _ (Univ.param idx), _ =>
+    let succ := Univ.succ (Univ.param idx)
+    leqCore (instantiateUniv a idx Univ.zero) (instantiateUniv b idx Univ.zero) diff &&
+    leqCore (instantiateUniv a idx succ) (instantiateUniv b idx succ) diff
+  | _, Univ.imax _ (Univ.param idx) =>
+    let succ := Univ.succ (Univ.param idx)
+    leqCore (instantiateUniv a idx Univ.zero) (instantiateUniv b idx Univ.zero) diff &&
+    leqCore (instantiateUniv a idx succ) (instantiateUniv b idx succ) diff
+  | Univ.imax a₁ (Univ.max a₂ a₃), _ =>
+    let new_max := Univ.max (Univ.imax a₁ a₂) (Univ.imax a₁ a₃)
+    leqCore new_max b diff
+  | Univ.imax a₁ (Univ.imax a₂ a₃), _ =>
+    let new_max := Univ.max (Univ.imax a₁ a₃) (Univ.imax a₂ a₃)
+    leqCore new_max b diff
+  | _, Univ.imax b₁ (Univ.max b₂ b₃) =>
+    let new_max := Univ.max (Univ.imax b₁ b₂) (Univ.imax b₁ b₃)
+    leqCore a new_max diff
+  | _, Univ.imax b₁ (Univ.imax b₂ b₃) =>
+    let new_max := Univ.max (Univ.imax b₁ b₃) (Univ.imax b₂ b₃)
+    leqCore a new_max diff
+  | _, _ => panic! "Impossible case"
 
-instance : ToIpld UnivMeta where
-  toIpld
-  | UnivMeta.zero     => Ipld.array #[Ipld.number UNIVMETA, Ipld.number 0]
-  | UnivMeta.succ p   => Ipld.array #[Ipld.number UNIVMETA, Ipld.number 1, toIpld p]
-  | UnivMeta.max x y  => Ipld.array #[Ipld.number UNIVMETA, Ipld.number 2, toIpld x, toIpld y]
-  | UnivMeta.imax x y => Ipld.array #[Ipld.number UNIVMETA, Ipld.number 3, toIpld x, toIpld y]
-  | UnivMeta.param n  => Ipld.array #[Ipld.number UNIVMETA, Ipld.number 4, toIpld n]
+partial def equalUniv (u u' : Univ) : Bool :=
+  let u := simplify u
+  let u' := simplify u'
+  leqCore u u' 0 && leqCore u' u 0
 
-  fromIpld
-  | array #[number UNIVMETA, number 0]       => UnivMeta.zero
-  | array #[number UNIVMETA, number 1, p]    => UnivMeta.succ <$> fromIpld p
-  | array #[number UNIVMETA, number 2, x, y] => UnivMeta.max <$> fromIpld x <*> fromIpld y
-  | array #[number UNIVMETA, number 3, x, y] => UnivMeta.imax <$> fromIpld x <*> fromIpld y
-  | array #[number UNIVMETA, number 4, n]    => UnivMeta.param <$> fromIpld n
-  | _ => throw (IpldError.Expected "UnivMeta")
+def equalUnivs (us us' : List Univ) : Bool :=
+  match us, us' with
+  | [], [] => true
+  | u::us, u'::us' => equalUniv u u' && equalUnivs us us'
+  | _, _ => false
 
 end Radiya

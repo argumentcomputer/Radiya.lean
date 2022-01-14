@@ -2,12 +2,12 @@ import Radiya.Ipld.Ipld
 import Radiya.Ipld.Cid
 import Radiya.Ipld.Multihash
 import Radiya.Ipld.DagCbor
-import Radiya.ToIpld
-import Radiya.Cid
-import Radiya.Name
-import Radiya.Univ
-import Radiya.Expr
-import Radiya.Const
+import Radiya.Content.ToIpld
+import Radiya.Content.Cid
+import Radiya.Content.Name
+import Radiya.Content.Univ
+import Radiya.Content.Expr
+import Radiya.Content.Const
 
 import Lean
 import Lean.Expr
@@ -18,7 +18,7 @@ open Lean (Literal)
 
 open Std (RBNode)
 
-namespace Radiya
+namespace Radiya.Content
 
 structure Env where
   lit : RBNode LitCid (fun _ => Literal)
@@ -126,7 +126,5 @@ instance : ToIpld Env where
       <*> fromIpld es
   | other => throw (IpldError.Expected "Object")
 
-end Radiya
 
-
-
+end Radiya.Content

@@ -1,8 +1,8 @@
 import Radiya.Ipld.Cid
 import Radiya.Ipld
-import Radiya.ToIpld
+import Radiya.Content.ToIpld
 
-namespace Radiya
+namespace Radiya.Content
 
 def LITERAL: UInt64 := 0xC0DE0000
 def NAME: UInt64 := 0x3E7A0000
@@ -142,4 +142,4 @@ instance : ToString EnvCid where
 instance : Ord EnvCid where
   compare x y := compare x.data y.data
 
-end Radiya
+end Radiya.Content
