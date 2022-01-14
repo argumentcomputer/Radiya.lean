@@ -8,12 +8,24 @@ inductive Univ where
 | param : Nat → Univ
 deriving Inhabited, BEq
 
-def instantiateUniv (u : Univ) (idx : Nat)(subst : Univ) : Univ :=
+def instantiateUniv (u : Univ) (idx : Nat) (subst : Univ) : Univ :=
   match u with
   | Univ.succ u => Univ.succ (instantiateUniv u idx subst)
   | Univ.max a b => Univ.max (instantiateUniv a idx subst) (instantiateUniv b idx subst)
   | Univ.imax a b => Univ.imax (instantiateUniv a idx subst) (instantiateUniv b idx subst)
-  | Univ.param idx' => if idx == idx' then subst else u
+  | Univ.param idx' =>
+    if idx' < idx then u else if idx' > idx then Univ.param (idx' - 1) else subst
+  | Univ.zero => u
+
+def instantiateBulk (substs : List Univ) (u : Univ) : Univ :=
+  match u with
+  | Univ.succ u => Univ.succ (instantiateBulk substs u)
+  | Univ.max a b => Univ.max (instantiateBulk substs a) (instantiateBulk substs b)
+  | Univ.imax a b => Univ.imax (instantiateBulk substs a) (instantiateBulk substs b)
+  | Univ.param idx =>
+    match List.get? substs idx with
+    | some u => u
+    | none => Univ.param (idx - List.length substs)
   | Univ.zero => u
 
 def combining (a b : Univ) : Univ :=
@@ -78,5 +90,12 @@ def equalUnivs (us us' : List Univ) : Bool :=
   | [], [] => true
   | u::us, u'::us' => equalUniv u u' && equalUnivs us us'
   | _, _ => false
+
+def isZero : Univ → Bool
+  | Univ.zero => true
+  | Univ.param _ => false
+  | Univ.succ _ => false
+  | Univ.max u v => isZero u && isZero v
+  | Univ.imax _ u => isZero u
 
 end Radiya
