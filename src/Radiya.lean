@@ -2,8 +2,9 @@ import Radiya.Ipld
 import Radiya.ToIpld
 import Radiya.Env
 import Radiya.Cid
+import Radiya.Frontend
 
-
-def main (name : List String) : IO Unit := do
-  println! "Hello {name}!"
+open Radiya.Frontend
+def main (args : List String) : IO UInt32 := do
+  mainCli args
 
