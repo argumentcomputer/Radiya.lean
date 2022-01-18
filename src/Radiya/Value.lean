@@ -83,11 +83,18 @@ mutual
     | Expr.lit lit => Value.lit lit
 end
 
-def quote (lvl : Nat) (val : Value) : Expr :=
-  panic! "TODO"
-
 def equalConst (k k' : ConstVal) : Bool :=
-  panic! "TODO"
+  match k, k' with
+| ConstVal.axiomC _ cid, ConstVal.axiomC _ cid' => cid == cid'
+| ConstVal.opaque _ cid, ConstVal.opaque _ cid' => cid == cid'
+| ConstVal.induct _ _ _ _ _, ConstVal.induct _ _ _ _ _ => panic! "TODO"
+| ConstVal.ctor _ _ _ _ _ _, ConstVal.ctor _ _ _ _ _ _ => panic! "TODO"
+| ConstVal.recursor _ _ _ _ _ _ _ _ _, ConstVal.recursor _ _ _ _ _ _ _ _ _ => panic! "TODO"
+| ConstVal.quotient _ QuotKind.ctor, ConstVal.quotient _ QuotKind.ctor => true
+| ConstVal.quotient _ QuotKind.type, ConstVal.quotient _ QuotKind.type => true
+| ConstVal.quotient _ QuotKind.ind, ConstVal.quotient _ QuotKind.ind => true
+| ConstVal.quotient _ QuotKind.lift, ConstVal.quotient _ QuotKind.lift => true
+| _, _ => false
 
 def equalNeu (n n' : Neutral) : Bool :=
   match n, n' with
@@ -130,6 +137,7 @@ inductive CheckError (A : Type) where
 | notTyp : CheckError A
 | notSameValues : CheckError A
 | cannotInferFix : CheckError A
+| cannotInferLam : CheckError A
 deriving Inhabited
 
 structure Ctx where
@@ -149,12 +157,14 @@ instance : Monad CheckError where
   | CheckError.notTyp => CheckError.notTyp
   | CheckError.notSameValues => CheckError.notSameValues
   | CheckError.cannotInferFix => CheckError.cannotInferFix
+  | CheckError.cannotInferLam => CheckError.cannotInferLam
   map f x := match x with
   | CheckError.ok y => CheckError.ok (f y)
   | CheckError.notPi => CheckError.notPi
   | CheckError.notTyp => CheckError.notTyp
   | CheckError.notSameValues => CheckError.notSameValues
   | CheckError.cannotInferFix => CheckError.cannotInferFix
+  | CheckError.cannotInferLam => CheckError.cannotInferLam
 
 mutual
   partial def check (ctx : Ctx) (term : Expr) (type : Value) : CheckError Unit :=
@@ -205,15 +215,10 @@ mutual
         let type := eval img (arg :: env) pi_univs
         pure type
       | _ => CheckError.notPi
-    | Expr.lam dom bod => do
-      match infer ctx dom with
-        | Value.sort u => pure ()
-        | _ => CheckError.notTyp
-      let dom := Thunk.mk (fun _ => eval dom ctx.env ctx.univs)
-      let ctx := extCtx ctx (mkVar ctx.lvl) dom
-      let bod_type ← infer ctx bod
-      let img := quote ctx.lvl bod_type
-      Value.pi dom img ctx.env ctx.univs
+      -- Should we add inference of lambda terms? Perhaps not on this checker,
+      -- but on another that is capable of general unification, since this checker
+      -- is supposed to be used on fully annotated terms.
+    | Expr.lam dom bod => CheckError.cannotInferLam
     | Expr.pi dom img  => do
       let dom_lvl ← match infer ctx dom with
         | Value.sort u => pure u
