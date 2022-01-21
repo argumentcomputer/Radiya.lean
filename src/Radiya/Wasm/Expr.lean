@@ -1,5 +1,5 @@
 
-namespace WASM
+namespace Wasm
 
 def U32 := UInt32
   deriving BEq
@@ -197,4 +197,4 @@ inductive Decl
   | modDecl : Module → Decl
   | exprDecl : Expr → Decl
   deriving BEq
-end WASM
+end Wasm
