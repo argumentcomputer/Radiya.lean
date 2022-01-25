@@ -21,14 +21,14 @@ structure Intro (Expr : Type) where
 
 mutual
   inductive Const where
-  | quotient : Nat → Expr → QuotKind → Const
-  | axiomC   : Nat → Expr → Bool → Cid → Const
-  | theoremC : Nat → Expr → Expr → Const
-  | opaque   : Nat → Expr → Expr → Bool → Cid → Const
-  | defn     : Nat → Expr → Expr → DefinitionSafety → Const
-  | induct   : Nat → Expr → Nat → Nat → List (Intro Expr) → Bool → Const
-  | ctor     : Nat → Expr → Const → Nat → Nat → Nat → Bool → Const
-  | recursor : Nat → Expr → Const → Nat → Nat → Nat → Nat → List (RecRule Expr) → Bool → Bool → Const
+  | quotient : Cid → Nat → Expr → QuotKind → Const
+  | axiomC   : Cid → Nat → Expr → Bool → Const
+  | theoremC : Cid → Nat → Expr → Expr → Const
+  | opaque   : Cid → Nat → Expr → Expr → Bool → Const
+  | defn     : Cid → Nat → Expr → Expr → DefinitionSafety → Const
+  | induct   : Cid → Nat → Expr → Nat → Nat → List (Intro Expr) → Bool → Const
+  | ctor     : Cid → Nat → Expr → Const → Nat → Nat → Nat → Bool → Const
+  | recursor : Cid → Nat → Expr → Const → Nat → Nat → Nat → Nat → List (RecRule Expr) → Bool → Bool → Const
 
   inductive Expr where
   | var   : Nat → Expr

@@ -7,12 +7,12 @@ open Lean (Literal QuotKind)
 namespace Radiya
 
 inductive ConstVal where
-| axiomC   : Nat → Cid → ConstVal
-| opaque   : Nat → Cid → ConstVal
-| induct   : Nat → Nat → Nat → List (Intro Expr) → Bool → ConstVal
-| ctor     : Nat → Const → Nat → Nat → Nat → Bool → ConstVal
-| recursor : Nat → Const → Nat → Nat → Nat → Nat → List (RecRule Expr) → Bool → Bool → ConstVal
-| quotient : Nat → QuotKind → ConstVal
+| axiomC   : Cid → Nat → ConstVal
+| opaque   : Cid → Nat → ConstVal
+| induct   : Cid → Nat → Nat → Nat → List (Intro Expr) → Bool → ConstVal
+| ctor     : Cid → Nat → Const → Nat → Nat → Nat → Bool → ConstVal
+| recursor : Cid → Nat → Const → Nat → Nat → Nat → Nat → List (RecRule Expr) → Bool → Bool → ConstVal
+| quotient : Cid → Nat → QuotKind → ConstVal
 deriving Inhabited
 
 inductive Neutral where
@@ -43,17 +43,17 @@ def mkVar (idx : Nat) : Value :=
 mutual
   partial def evalConst (const : Const) (univs : List Univ) : Value :=
     match const with
-    | Const.quotient size _ kind => mkConst (ConstVal.quotient size kind) univs
-    | Const.axiomC   size _ _ cid => mkConst (ConstVal.axiomC size cid) univs
-    | Const.theoremC size _ exp => eval exp [] univs
-    | Const.opaque   size _ _ _ cid => mkConst (ConstVal.opaque size cid) univs
-    | Const.defn     size _ exp _ => eval exp [] univs
-    | Const.induct   size _ params indices intros isUnsafe =>
-      mkConst (ConstVal.induct size params indices intros isUnsafe) univs
-    | Const.ctor     size _ induct cidx params fields isUnsafe =>
-      mkConst (ConstVal.ctor size induct cidx params fields isUnsafe) univs
-    | Const.recursor size _ induct indices params motives minors recRules isK isUnsafe =>
-      mkConst (ConstVal.recursor size induct indices params motives minors recRules isK isUnsafe) univs
+    | Const.quotient cid size _ kind => mkConst (ConstVal.quotient cid size kind) univs
+    | Const.axiomC   cid size _ _ => mkConst (ConstVal.axiomC cid size) univs
+    | Const.theoremC cid size _ exp => eval exp [] univs
+    | Const.opaque   cid size _ _ _ => mkConst (ConstVal.opaque cid size) univs
+    | Const.defn     cid size _ exp _ => eval exp [] univs
+    | Const.induct   cid size _ params indices intros isUnsafe =>
+      mkConst (ConstVal.induct cid size params indices intros isUnsafe) univs
+    | Const.ctor     cid size _ induct cidx params fields isUnsafe =>
+      mkConst (ConstVal.ctor cid size induct cidx params fields isUnsafe) univs
+    | Const.recursor cid size _ induct indices params motives minors recRules isK isUnsafe =>
+      mkConst (ConstVal.recursor cid size induct indices params motives minors recRules isK isUnsafe) univs
 
   partial def eval (term : Expr) (env : Env) (univs : List Univ) : Value :=
     match term with
@@ -61,10 +61,10 @@ mutual
       let thunk := Thunk.mk (fun _ => eval arg env univs)
       match eval fnc env univs with
       | Value.lam bod lam_env lam_univs => eval bod (thunk :: lam_env) lam_univs
-      | Value.app (Neutral.var idx) args => Value.app (Neutral.var idx) (thunk :: args)
+      | Value.app var@(Neutral.var _) args => Value.app var (thunk :: args)
       | Value.app (Neutral.const _ _) _ => panic! "TODO"
       -- Since terms are typed checked we know that any other case is impossible
-      | _ => panic! "Impossible"
+      | _ => panic! "Impossible eval case"
     | Expr.lam _ bod => Value.lam bod env univs
     | Expr.var idx =>
       let thunk := List.get! env idx
@@ -85,15 +85,22 @@ end
 
 def equalConst (k k' : ConstVal) : Bool :=
   match k, k' with
-| ConstVal.axiomC _ cid, ConstVal.axiomC _ cid' => cid == cid'
-| ConstVal.opaque _ cid, ConstVal.opaque _ cid' => cid == cid'
-| ConstVal.induct _ _ _ _ _, ConstVal.induct _ _ _ _ _ => panic! "TODO"
-| ConstVal.ctor _ _ _ _ _ _, ConstVal.ctor _ _ _ _ _ _ => panic! "TODO"
-| ConstVal.recursor _ _ _ _ _ _ _ _ _, ConstVal.recursor _ _ _ _ _ _ _ _ _ => panic! "TODO"
-| ConstVal.quotient _ QuotKind.ctor, ConstVal.quotient _ QuotKind.ctor => true
-| ConstVal.quotient _ QuotKind.type, ConstVal.quotient _ QuotKind.type => true
-| ConstVal.quotient _ QuotKind.ind, ConstVal.quotient _ QuotKind.ind => true
-| ConstVal.quotient _ QuotKind.lift, ConstVal.quotient _ QuotKind.lift => true
+-- It is assumed here that equal CIDs imply equal sizes of parameters bound.
+-- This is a fair assumption since the elaborator should never build constants
+-- of same kind and CIDs but different binding sizes.
+| ConstVal.induct cid _ _ _ _ _, ConstVal.induct cid' _ _ _ _ _ => cid == cid'
+| ConstVal.ctor cid _ _ _ _ _ _, ConstVal.ctor cid' _ _ _ _ _ _ => cid == cid'
+| ConstVal.recursor cid _ _ _ _ _ _ _ _ _, ConstVal.recursor cid' _ _ _ _ _ _ _ _ _ => cid == cid'
+| ConstVal.quotient cid _ QuotKind.ctor, ConstVal.quotient cid' _ QuotKind.ctor => cid == cid'
+| ConstVal.quotient cid _ QuotKind.type, ConstVal.quotient cid' _ QuotKind.type => cid == cid'
+| ConstVal.quotient cid _ QuotKind.ind, ConstVal.quotient cid' _ QuotKind.ind => cid == cid'
+| ConstVal.quotient cid _ QuotKind.lift, ConstVal.quotient cid' _ QuotKind.lift => cid == cid'
+-- By not carrying the types, we assume the CIDs of axiom values and opaque values will differ by name and type.
+-- This means that axioms are only equal if their names are equal and their types are *syntactically* equal.
+-- Otherwise, we could carry around the types and checking here for beta-eta convertibility (a more general kind
+-- of equality) and have CIDs only differ by name.
+| ConstVal.axiomC cid _, ConstVal.axiomC cid' _ => cid == cid'
+| ConstVal.opaque cid _, ConstVal.opaque cid' _ => cid == cid'
 | _, _ => false
 
 def equalNeu (n n' : Neutral) : Bool :=
@@ -103,31 +110,62 @@ def equalNeu (n n' : Neutral) : Bool :=
     equalConst k k' && equalUnivs us us'
   | _, _ => false
 
+def isUnit (lvl : Nat) (term : Value) : Bool :=
+  false -- TODO
+
+def isProp (lvl : Nat) (term : Value) : Bool :=
+  false -- TODO
+
 mutual
-  partial def equal (lvl : Nat) (term term' : Value) : Bool :=
-    match term, term' with
+  -- It is assumed here that the terms are typechecked, have both the same type
+  -- and live in the same environment
+  partial def equal (lvl : Nat) (term term' type : Value) : Bool :=
+    if isUnit lvl type || isProp lvl type then true
+    else match term, term' with
     | Value.lit lit, Value.lit lit' => lit == lit'
     | Value.sort u, Value.sort u' => equalUniv u u'
-    | Value.app neu args, Value.app neu' args' => equalNeu neu neu' && equalThunks lvl args args'
     | Value.pi dom img env univs, Value.pi dom' img' env' univs' =>
       let var := mkVar lvl
-      equal lvl dom.get dom'.get &&
-      equal (lvl + 1) (eval img (var :: env) univs) (eval img' (var :: env') univs')
+      -- For equality we don't need to know the universe levels, only the "shape" of the type.
+      -- If we did have to know the universe level, then we probably would have to cache it
+      -- so that we wouldn't need to infer the type just to get the level.
+      -- Here, it is assumed that `type` is some a `Sort`
+      equal lvl dom.get dom'.get type &&
+      equal (lvl + 1) (eval img (var :: env) univs) (eval img' (var :: env') univs') type
     | Value.lam bod env univs, Value.lam bod' env' univs' =>
-      let var := mkVar lvl
-      equal (lvl + 1) (eval bod (var :: env) univs) (eval bod' (var :: env') univs')
+      match type with
+      | Value.pi _ img pi_env pi_univs =>
+        let var := mkVar lvl
+        let bod := eval bod (var :: env) univs
+        let bod' := eval bod' (var :: env') univs'
+        let img := eval img (var :: pi_env) pi_univs
+        equal (lvl + 1) bod bod' img
+      | _ => panic! "Impossible equal case"
     | Value.lam bod env univs, Value.app neu' args' =>
-      let var := mkVar lvl
-      equal (lvl + 1) (eval bod (var :: env) univs) (Value.app neu' (var :: args'))
+      match type with
+      | Value.pi _ img pi_env pi_univs =>
+        let var := mkVar lvl
+        let bod := eval bod (var :: env) univs
+        let app := Value.app neu' (var :: args')
+        let img := eval img (var :: pi_env) pi_univs
+        equal (lvl + 1) bod app img
+      | _ => panic! "Impossible equal case"
     | Value.app neu args, Value.lam bod' env' univs' =>
-      let var := mkVar lvl
-      equal (lvl + 1) (Value.app neu (var :: args)) (eval bod' (var :: env') univs')
+      match type with
+      | Value.pi _ img pi_env pi_univs =>
+        let var := mkVar lvl
+        let bod := eval bod' (var :: env') univs'
+        let app := Value.app neu (var :: args)
+        let img := eval img (var :: pi_env) pi_univs
+        equal (lvl + 1) app bod img
+      | _ => panic! "Impossible equal case"
+    | Value.app neu args, Value.app neu' args' => equalNeu neu neu' && equalThunks lvl args args' type -- TODO
     | _, _ => false
 
-  partial def equalThunks (lvl : Nat) (vals vals' : List (Thunk Value)) : Bool :=
+  partial def equalThunks (lvl : Nat) (vals vals' : List (Thunk Value)) (type : Value) : Bool :=
     match vals, vals' with
     | [], [] => true
-    | val::vals, val'::vals' => equal lvl val.get val'.get && equalThunks lvl vals vals'
+    | val::vals, val'::vals' => equal lvl val.get val'.get type && equalThunks lvl vals vals' type -- TODO
     | _, _ => false
 end
 
@@ -168,33 +206,34 @@ instance : Monad CheckError where
 
 mutual
   partial def check (ctx : Ctx) (term : Expr) (type : Value) : CheckError Unit :=
-    match term, type with
-    | Expr.lam lam_dom bod, Value.pi dom img env pi_univs =>
-      -- TODO check that `lam_dom` == `dom`
-      -- though this is wasteful, since this would force
-      -- `dom`, which might not need to be evaluated.
-      let var := mkVar ctx.lvl
-      let ctx := extCtx ctx var dom
-      check ctx bod (eval img (var :: env) pi_univs)
-    | Expr.lam _ _, _ =>
-      CheckError.notPi
-    | Expr.letE typ exp bod, let_typ => do
-      let sort ← infer ctx typ
+    match term with
+    | Expr.lam lam_dom bod =>
+      match type with
+      | Value.pi dom img env pi_univs =>
+        -- TODO check that `lam_dom` == `dom`
+        -- though this is wasteful, since this would force
+        -- `dom`, which might not need to be evaluated.
+        let var := mkVar ctx.lvl
+        let ctx := extCtx ctx var dom
+        check ctx bod (eval img (var :: env) pi_univs)
+      | _ => CheckError.notPi
+    | Expr.letE exp_typ exp bod => do
+      let sort ← infer ctx exp_typ
       match sort with
       | Value.sort u => pure ()
       | _ => CheckError.notTyp
-      let typ := eval typ ctx.env ctx.univs
-      check ctx exp typ
+      let exp_typ := eval exp_typ ctx.env ctx.univs
+      check ctx exp exp_typ
       let exp := Thunk.mk (fun _ => eval exp ctx.env ctx.univs)
-      let typ := Thunk.mk (fun _ => typ)
-      let ctx := extCtx ctx exp typ
-      check ctx bod let_typ
-    | Expr.fix bod, type =>
+      let exp_typ := Thunk.mk (fun _ => exp_typ)
+      let ctx := extCtx ctx exp exp_typ
+      check ctx bod type
+    | Expr.fix bod =>
       let ctx := extCtx ctx (Thunk.mk (fun _ => eval term ctx.env ctx.univs)) type
       check ctx bod type
-    | term, type => do
+    | _ => do
       let infer_type ← infer ctx term
-      if equal ctx.lvl type infer_type
+      if equal ctx.lvl type infer_type (Value.sort Univ.zero)
       then pure ()
       else CheckError.notSameValues
 
@@ -228,16 +267,16 @@ mutual
         | Value.sort u => pure u
         | _ => CheckError.notTyp
       pure (Value.sort (Univ.imax dom_lvl img_lvl))
-    | Expr.letE typ exp bod => do
-      let sort ← infer ctx typ
+    | Expr.letE exp_typ exp bod => do
+      let sort ← infer ctx exp_typ
       match sort with
       | Value.sort u => pure ()
       | _ => CheckError.notTyp
-      let typ := eval typ ctx.env ctx.univs
-      check ctx exp typ
+      let exp_typ := eval exp_typ ctx.env ctx.univs
+      check ctx exp exp_typ
       let exp := Thunk.mk (fun _ => eval exp ctx.env ctx.univs)
-      let typ := Thunk.mk (fun _ => typ)
-      let ctx := extCtx ctx exp typ
+      let exp_typ := Thunk.mk (fun _ => exp_typ)
+      let ctx := extCtx ctx exp exp_typ
       infer ctx bod
     | Expr.fix _ =>
       CheckError.cannotInferFix
