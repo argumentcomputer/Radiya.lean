@@ -25,7 +25,7 @@ A self-hosted Lean4 kernel with content-addressing
 - Enable direnv: `direnv allow`
 - Install [nixFlakes](https://nixos.wiki/wiki/Flakes): `nix-env -iA nixpkgs.nixUnstable`
 - Enable nix flakes and commands.
-  - If you already have a `nix.conf`, add "experimental-features = nix-command flakes" to `~/.config/nix/nix.conf`.
+  - If you already have a `nix.conf`, add `experimental-features = nix-command flakes` to `~/.config/nix/nix.conf`.
   - If you don't have a `nix.conf`: `mkdir -p ~/.config/nix && echo "experimental-features = nix-command flakes" > ~/.config/nix/nix.conf`.
 - Clone this repo: `git clone https://github.com/yatima-inc/Radiya.lean.git`
 - `cd` into that directory: `cd ~/Radiya.lean` if that's where you cloned it.
