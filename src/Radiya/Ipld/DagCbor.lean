@@ -62,8 +62,6 @@ def ser_link (l: Cid) : ByteArray := Id.run do
   out := out.append (ByteArray.mk #[0])
   out.append buf
 
-def nodeToList (map : RBNode String (fun _ => Ipld)) : List (String × Ipld) := 
-  map.revFold (fun as a b => (a,b)::as) []
 
 -- TODO: Add termination_by measure to show that serialize does terminate
 mutual
@@ -84,7 +82,7 @@ partial def ser_array (a: Array Ipld) : ByteArray := Id.run do
   self
 
 partial def ser_object (o: RBNode String (fun _ => Ipld)) : ByteArray := Id.run do
-  let list := List.map (fun (k,v) => (ser_string k, serialize v)) (nodeToList o)
+  let list := List.map (fun (k,v) => (ser_string k, serialize v)) (Ipld.nodeToList o)
   let list := List.mergesortBy (fun (k,v) (k',v') => compare k k') list
   let mut self := ser_u64 5 list.length.toUInt64
   for (k, v) in list do

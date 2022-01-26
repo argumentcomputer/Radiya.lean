@@ -25,7 +25,37 @@ inductive Ipld where
 | link (cid: Cid)
 deriving BEq, Inhabited
 
-instance : Repr Ipld where
+namespace Ipld
+
+def nodeToList (map : RBNode String (fun _ => Ipld)) : List (String × Ipld) :=
+  map.revFold (fun as a b => (a,b)::as) []
+
+mutual
+partial def listToStringAux : List Ipld → String
+  | []    => ""
+  | x::xs => ", " ++ toStringAux x ++ listToStringAux xs
+
+partial def objectToStringAux : List (String × Ipld) → String
+  | []    => ""
+  | (n,x)::xs => "; " ++ n ++ " " ++ toStringAux x ++ objectToStringAux xs
+
+partial def toStringAux : Ipld -> String
+| Ipld.null =>  "null"
+| Ipld.bool b  =>  toString b 
+| Ipld.number n  =>  toString n
+| Ipld.string n  =>  toString n
+| Ipld.bytes n  =>  toString n
+| Ipld.array n  =>  "[" ++ listToStringAux n.data ++ "]"
+| Ipld.object n  =>  "{" ++ objectToStringAux (nodeToList n) ++ "}"
+| Ipld.link n => toString n
+end
+
+end Ipld
+
+instance : ToString Ipld where
+   toString := Ipld.toStringAux
+
+instance Ipld.Repr : Repr Ipld where
   reprPrec
   | Ipld.null, prec => Repr.addAppParen ("Ipld.null") prec
   | Ipld.bool b, prec => Repr.addAppParen ("Ipld.bool " ++ toString b) prec
@@ -33,20 +63,9 @@ instance : Repr Ipld where
   | Ipld.string n, prec => Repr.addAppParen ("Ipld.string " ++ toString n) prec
   | Ipld.bytes n, prec => Repr.addAppParen ("Ipld.bytes " ++ toString n) prec
   | Ipld.link n, prec => Repr.addAppParen ("Ipld.link " ++ toString n) prec
-  --| Ipld.array n, prec => Repr.addAppParen ("Ipld.array " ++ reprPrec n.data prec) prec
-  | _, prec => Repr.addAppParen ("Ipld.todo") prec
+  | Ipld.array n, prec => Repr.addAppParen ("Ipld.array " ++ toString n) prec
+  | Ipld.object n, prec => Repr.addAppParen ("Ipld.object " ++ toString (Ipld.object n)) prec
 
---def Ipld.toStringAux : Ipld -> String
---| Ipld.null =>  "Ipld.null" 
---| Ipld.bool b  =>  "Ipld.bool " ++ toString b 
---| Ipld.number n  =>  "Ipld.number " ++ toString n 
---| Ipld.string n  =>  "Ipld.string " ++ toString n 
---| Ipld.byte n  =>  "Ipld.byte " ++ toString n 
-----| Ipld.array n  =>  "Ipld.array " ++ n.data
---| _  =>  "Ipld.todo" 
---
---instance : ToString Ipld where
---   toString := Ipld.toStringAux
 namespace Ipld
 
 def mkObject (o : List (String × Ipld)) : Ipld :=
