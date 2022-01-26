@@ -21,7 +21,7 @@ A self-hosted Lean4 kernel with content-addressing
 
 - Install the [Nix package manager](https://nixos.org/download.html): `sh <(curl -L https://nixos.org/nix/install)
 --daemon`
-- Install [direnv](https://direnv.net/): `nix-env -iA direnv`
+- Install [direnv](https://direnv.net/): `nix-env -iA nixpkgs.direnv`
 - Enable direnv: `direnv allow`
 - Install [nixFlakes](https://nixos.wiki/wiki/Flakes): `nix-env -iA nixpkgs.nixUnstable`
 - Enable nix flakes and commands.
