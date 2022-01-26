@@ -22,6 +22,7 @@ A self-hosted Lean4 kernel with content-addressing
 - Install the [Nix package manager](https://nixos.org/download.html): `sh <(curl -L https://nixos.org/nix/install)
 --daemon`
 - Install [direnv](https://direnv.net/): `nix-env -iA nixpkgs.direnv`
+- Hook direnv into your shell, by following these shell specific instructions: https://direnv.net/docs/hook.html. For example, in `bash` or `zsh`: `eval "$(direnv hook bash)"`
 - Install [nixFlakes](https://nixos.wiki/wiki/Flakes): `nix-env -iA nixpkgs.nixUnstable`
 - Enable nix flakes and commands.
   - If you already have a `nix.conf`, add `experimental-features = nix-command flakes` to `~/.config/nix/nix.conf`.
