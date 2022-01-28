@@ -6,18 +6,14 @@ open Lean (Literal DefinitionSafety QuotKind)
 
 namespace Radiya
 
-def Name := String
+abbrev Name := String
 
 -- Lean does not support mutual blocks with structure and inductive, so we have to parametrize
--- the following structures
+-- the following structure
 structure RecRule (Expr : Type) where
   ctor : Name
   fields : Nat
   rhs : Expr
-
-structure Intro (Expr : Type) where
-  ctor : Name
-  typ : Expr
 
 mutual
   inductive Const where
@@ -26,7 +22,7 @@ mutual
   | theoremC : Cid → Nat → Expr → Expr → Const
   | opaque   : Cid → Nat → Expr → Expr → Bool → Const
   | defn     : Cid → Nat → Expr → Expr → DefinitionSafety → Const
-  | induct   : Cid → Nat → Expr → Nat → Nat → List (Intro Expr) → Bool → Const
+  | induct   : Cid → Nat → Expr → Nat → Nat → List Const → Bool → Const
   | ctor     : Cid → Nat → Expr → Const → Nat → Nat → Nat → Bool → Const
   | recursor : Cid → Nat → Expr → Const → Nat → Nat → Nat → Nat → List (RecRule Expr) → Bool → Bool → Const
 

@@ -9,7 +9,7 @@ namespace Radiya
 inductive ConstVal where
 | axiomC   : Cid → Nat → ConstVal
 | opaque   : Cid → Nat → ConstVal
-| induct   : Cid → Nat → Nat → Nat → List (Intro Expr) → Bool → ConstVal
+| induct   : Cid → Nat → Nat → Nat → List Const → Bool → ConstVal
 | ctor     : Cid → Nat → Const → Nat → Nat → Nat → Bool → ConstVal
 | recursor : Cid → Nat → Const → Nat → Nat → Nat → Nat → List (RecRule Expr) → Bool → Bool → ConstVal
 | quotient : Cid → Nat → QuotKind → ConstVal
@@ -37,8 +37,8 @@ instance : Inhabited Value where
 instance : Inhabited Neutral where
   default := Neutral.var 0 (Thunk.mk (fun _ => Value.sort Univ.zero))
 
-def Env := List (Thunk Value)
-def Args := List (Thunk Value)
+abbrev Env := List (Thunk Value)
+abbrev Args := List (Thunk Value)
 
 instance : Inhabited (Thunk Value) where
   default := Thunk.mk (fun _ => Value.sort Univ.zero)
@@ -128,7 +128,15 @@ def equalConst (k k' : ConstVal) : Bool :=
 
 def isUnit (lvl : Nat) (type : Value) : Bool :=
   match type with
-  | Value.app (Neutral.const (ConstVal.induct ..) ..) _ => panic! "TODO"
+  | Value.app (Neutral.const (ConstVal.induct _ _ _ _ intros ..) ..) _ =>
+    match intros with
+    | intro :: intros' =>
+      if List.length intros' > 0
+      then false
+      else match intro with
+      | Const.ctor _ _ _ _ _ _ num_fields _ => num_fields == 0
+      | _ => panic! "Impossible case"
+    | [] => false
   | _ => false
 
 def isProp (lvl : Nat) (type : Value) : Bool :=
