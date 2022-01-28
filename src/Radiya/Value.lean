@@ -6,15 +6,6 @@ open Lean (Literal QuotKind)
 
 namespace Radiya
 
-inductive ConstVal where
-| axiomC   : Cid → Nat → ConstVal
-| opaque   : Cid → Nat → ConstVal
-| induct   : Cid → Nat → Nat → Nat → List Const → Bool → ConstVal
-| ctor     : Cid → Nat → Const → Nat → Nat → Nat → Bool → ConstVal
-| recursor : Cid → Nat → Const → Nat → Nat → Nat → Nat → List (RecRule Expr) → Bool → Bool → ConstVal
-| quotient : Cid → Nat → QuotKind → ConstVal
-deriving Inhabited
-
 mutual
   inductive Value where
   | sort  : Univ → Value
@@ -23,10 +14,10 @@ mutual
   | pi    : Thunk Value → Expr → List (Thunk Value) → List Univ → Value
   | lit   : Literal → Value
 
-  -- Here neutrals also have its type, but this is purely for an optimization
+  -- Here variables also carry their types, but this is purely for an optimization
   -- in equal, so that it doesn't need to carry around a context of types
   inductive Neutral where
-  | const : ConstVal → List Univ → Thunk Value → Neutral
+  | const : Const → List Univ → Neutral
   | var   : Nat → Thunk Value → Neutral
 end
 
@@ -43,40 +34,23 @@ abbrev Args := List (Thunk Value)
 instance : Inhabited (Thunk Value) where
   default := Thunk.mk (fun _ => Value.sort Univ.zero)
 
-def mkConst (k : ConstVal) (univs : List Univ) (type : Thunk Value) : Value :=
-  Value.app (Neutral.const k univs type) []
+def mkConst (k : Const) (univs : List Univ) : Value :=
+  Value.app (Neutral.const k univs) []
 
 def mkVar (idx : Nat) (type : Thunk Value) : Value :=
   Value.app (Neutral.var idx type) []
 
 mutual
-  -- Question: are constant types always closed, or could they have free variables
-  -- as well? If they're always closed, we can evaluate them in an empty environment.
-  -- We'll take the more conservative approach of assuming they might be open
-  partial def evalConst (const : Const) (env : Env) (univs : List Univ) : Value :=
+  partial def evalConst (const : Const) (univs : List Univ) : Value :=
     match const with
-    | Const.quotient cid size type kind =>
-      let type := Thunk.mk (fun _ => eval type env univs)
-      mkConst (ConstVal.quotient cid size kind) univs type
-    | Const.axiomC   cid size type _ =>
-      let type := Thunk.mk (fun _ => eval type env univs)
-      mkConst (ConstVal.axiomC cid size) univs type
-    | Const.theoremC cid size type exp =>
-      eval exp [] univs
-    | Const.opaque   cid size type .. =>
-      let type := Thunk.mk (fun _ => eval type env univs)
-      mkConst (ConstVal.opaque cid size) univs type
-    | Const.defn     cid size type exp _ =>
-      eval exp [] univs
-    | Const.induct   cid size type params indices intros isUnsafe =>
-      let type := Thunk.mk (fun _ => eval type env univs)
-      mkConst (ConstVal.induct cid size params indices intros isUnsafe) univs type
-    | Const.ctor     cid size type induct cidx params fields isUnsafe =>
-      let type := Thunk.mk (fun _ => eval type env univs)
-      mkConst (ConstVal.ctor cid size induct cidx params fields isUnsafe) univs type
-    | Const.recursor cid size type induct indices params motives minors recRules isK isUnsafe =>
-      let type := Thunk.mk (fun _ => eval type env univs)
-      mkConst (ConstVal.recursor cid size induct indices params motives minors recRules isK isUnsafe) univs type
+    | Const.theoremC x =>
+      eval x.expr [] univs
+    | Const.defn x =>
+      match x.safety with
+      | DefinitionSafety.safe => eval x.expr [] univs
+      | DefinitionSafety.part => mkConst const univs
+      | DefinitionSafety.unsa => panic! "Unsafe definition found"
+    | _ => mkConst const univs
 
   partial def eval (term : Expr) (env : Env) (univs : List Univ) : Value :=
     match term with
@@ -92,7 +66,7 @@ mutual
     | Expr.var idx =>
       let thunk := List.get! env idx
       thunk.get
-    | Expr.const k const_univs => evalConst k env (List.map (instantiateBulk univs) const_univs)
+    | Expr.const k const_univs => evalConst k (List.map (instantiateBulk univs) const_univs)
     | Expr.letE _ val bod =>
       let thunk := Thunk.mk (fun _ => eval val env univs)
       eval bod (thunk :: env) univs
@@ -106,37 +80,28 @@ mutual
     | Expr.lit lit => Value.lit lit
 end
 
-def equalConst (k k' : ConstVal) : Bool :=
+-- Assumes evaluated (delta-reduced) constants
+def equalConst (k k' : Const) : Bool :=
   match k, k' with
--- It is assumed here that equal CIDs imply equal sizes of parameters bound.
--- This is a fair assumption since the elaborator should never build constants
--- of same kind and CIDs but different binding sizes.
-| ConstVal.induct cid .., ConstVal.induct cid' .. => cid == cid'
-| ConstVal.ctor cid .., ConstVal.ctor cid' .. => cid == cid'
-| ConstVal.recursor cid .., ConstVal.recursor cid' .. => cid == cid'
-| ConstVal.quotient cid _ QuotKind.ctor, ConstVal.quotient cid' _ QuotKind.ctor => cid == cid'
-| ConstVal.quotient cid _ QuotKind.type, ConstVal.quotient cid' _ QuotKind.type => cid == cid'
-| ConstVal.quotient cid _ QuotKind.ind, ConstVal.quotient cid' _ QuotKind.ind => cid == cid'
-| ConstVal.quotient cid _ QuotKind.lift, ConstVal.quotient cid' _ QuotKind.lift => cid == cid'
--- By not carrying the types, we assume the CIDs of axiom values and opaque values will differ by name and type.
--- This means that axioms are only equal if their names are equal and their types are *syntactically* equal.
--- Otherwise, we could carry around the types and checking here for beta-eta convertibility (a more general kind
--- of equality) and have CIDs only differ by name.
-| ConstVal.axiomC cid _, ConstVal.axiomC cid' _ => cid == cid'
-| ConstVal.opaque cid _, ConstVal.opaque cid' _ => cid == cid'
-| _, _ => false
+  | Const.induct x, Const.induct x' => x.cid == x'.cid
+  | Const.ctor x, Const.ctor x' => x.cid == x'.cid && x.ctor_idx == x'.ctor_idx
+  | Const.recursor x, Const.recursor x' => x.cid == x'.cid
+  | Const.quotient x, Const.quotient x' => x.kind == x'.kind
+  -- We assume the CIDs of axiom values and opaque values will differ by name and type. This means
+  -- that axioms are only equal if their names are equal and their types are *syntactically* equal.
+  -- Otherwise, we could check the types for beta-eta convertibility, a more general kind of equality,
+  -- and have CIDs only differ by name.
+  | Const.axiomC x, Const.axiomC x' => x.cid == x'.cid
+  | Const.opaque x, Const.opaque x' => x.cid == x'.cid
+  | Const.defn x, Const.defn x' => x.cid == x'.cid
+  | _, _ => false
 
 def isUnit (lvl : Nat) (type : Value) : Bool :=
   match type with
-  | Value.app (Neutral.const (ConstVal.induct _ _ _ _ intros ..) ..) _ =>
-    match intros with
-    | intro :: intros' =>
-      if List.length intros' > 0
-      then false
-      else match intro with
-      | Const.ctor _ _ _ _ _ _ num_fields _ => num_fields == 0
-      | _ => panic! "Impossible case"
-    | [] => false
+  | Value.app (Neutral.const (Const.induct induct) ..) _ =>
+    match induct.ctors with
+    | [ctor] => ctor.num_fields == 0
+    | _ => false
   | _ => false
 
 def isProp (lvl : Nat) (type : Value) : Bool :=
@@ -191,8 +156,9 @@ mutual
       idx == idx' &&
       List.length args == List.length args' &&
       equalThunks lvl args args' var_type
-    | Value.app (Neutral.const k us const_type) args, Value.app (Neutral.const k' us' _) args' =>
+    | Value.app (Neutral.const k us) args, Value.app (Neutral.const k' us') args' =>
       -- Analogous assumption on the types of the constants
+      let const_type := Thunk.mk (fun _ => eval (extractConstType k) [] us)
       equalConst k k' &&
       List.length args != List.length args' &&
       equalUnivs us us' &&
