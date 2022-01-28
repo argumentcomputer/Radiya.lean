@@ -36,5 +36,7 @@ If you want to develop on Radiya, make sure you start your editor from a command
 prompt in with Radiya.lean as the working directory, so that direnv can ensure
 your environment correctly integrates with Lean editor plugins.
 
+For building on M1 MacOS, please see further information [here](/Build_on_M1_MacOS.md).
+
 
 
