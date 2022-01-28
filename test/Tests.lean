@@ -31,7 +31,6 @@ def main (args : List String) : IO UInt32 := do
     match Tests.Multihash.findFailing Tests.Multihash.cases with
     | [] => IO.println "✓ sha3-512"
     | xs => IO.println s!"𐄂 sha3-512: {xs}"
-    pure 0
     IO.println "DagCbor:"
     match Tests.DagCbor.findFailing Tests.DagCbor.cases with
     | [] => IO.println "✓ DagCbor"
