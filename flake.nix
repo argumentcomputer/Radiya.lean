@@ -10,19 +10,13 @@
       url = github:yatima-inc/nix-utils;
       inputs.nixpkgs.follows = "nixpkgs";
     };
-    # A lean dependency
-    lean-ipld = {
-      url = github:yatima-inc/lean-ipld;
-      # Compile dependencies with the same lean version
-      inputs.lean.follows = "lean";
-    };
   };
 
-  outputs = { self, lean, utils, nixpkgs, lean-ipld }:
+  outputs = { self, lean, utils, nixpkgs }:
     let
       supportedSystems = [
         # "aarch64-linux"
-        # "aarch64-darwin"
+        "aarch64-darwin"
         "i686-linux"
         "x86_64-darwin"
         "x86_64-linux"
@@ -53,6 +47,7 @@
         inherit project test;
         packages = {
           ${name} = project.executable;
+          test = test.executable;
         };
 
         checks.test = test.executable;

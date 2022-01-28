@@ -29,22 +29,4 @@ def fromVarInt (b: ByteArray) : Option (Nat × ByteArray) :=
 instance : BEq ByteArray where
   beq a b := a.data == b.data
 
-namespace Test
-
-#eval (fromVarInt (toVarInt 1)).get!.fst == 1
-#eval (toVarInt 127) == { data := #[0b01111111] }
-
---#reduce (fromVarInt (toVarInt 1)).get! = 1 
-
-#eval (fromVarInt (toVarInt 127)).get!.fst == 127
-#eval toVarInt 255 
-#eval (toVarInt 255 == { data := #[0b11111111, 0b00000001] })
-#eval (toVarInt 255 == { data := #[0b01111111, 0b00000001] })
-#eval (fromVarInt (toVarInt 255)).get!.fst == 255
-#eval (toVarInt 300 == { data := #[0b10101100, 0b00000010] })
-#eval (fromVarInt (toVarInt 300)).get!.fst == 300
-#eval (toVarInt 16384 == { data := #[0b10000000, 0b10000000, 0b00000001] })
-#eval (fromVarInt (toVarInt 16384)).get!.fst == 16384
-
-end Test
 end UnsignedVarint

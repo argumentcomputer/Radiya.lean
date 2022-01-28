@@ -17,11 +17,11 @@ namespace Multihash
 def toBytes (self : Multihash) : ByteArray :=
   (UnsignedVarint.toVarInt self.code) ++ (UnsignedVarint.toVarInt self.size) ++ self.digest
 
-def toString (self: Multihash) : String :=
-  Multibase.encode Multibase.Base64 (toBytes self).toList
+def toString (β : Type) [Multibase β] (self: Multihash) : String :=
+  Multibase.encode β (toBytes self).toList
 
 instance : ToString Multihash where
-  toString := toString
+  toString := toString Multibase.Base16
 
 def fromBytes (bytes : ByteArray) : Option Multihash :=
   Option.bind (UnsignedVarint.fromVarInt bytes) $ fun (code, bytes) =>
@@ -32,6 +32,9 @@ def fromBytes (bytes : ByteArray) : Option Multihash :=
 
 def sha3_256 (x: ByteArray) : Multihash :=
   {code := 0x16, size := 32, digest := Keccak.sha3_256 x }
+
+def sha3_512 (x: ByteArray) : Multihash :=
+  {code := 0x14, size := 64, digest := Keccak.sha3_512 x }
 
 namespace Test
 

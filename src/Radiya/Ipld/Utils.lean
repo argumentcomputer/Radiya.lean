@@ -113,6 +113,14 @@ namespace List
   def mergesortBy {α : Type u} (cmp: α -> α -> Ordering) (xs: List α) : List α :=
     mergesort' cmp (map (fun x => [x]) xs)
 
+  def mapOption {α β: Type u} : (α → Option β) → List α → List β
+  | _, [] => []
+  | f, x::xs => let rs := mapOption f xs;
+    match f x with
+    | Option.none => rs
+    | Option.some r => r::rs
+
+  def catOptions {α : Type u} : List (Option α) → List α := mapOption id
 
 end List
 
@@ -173,3 +181,9 @@ instance [BEq α] [BEq β] : BEq (RBNode α fun _ => β) where
   beq a b := RBNode.toList a == RBNode.toList b
 
 end RBNode
+
+instance Option.monad : Monad Option where
+  bind     := Option.bind
+  pure     := Option.some
+  map      := Option.map
+

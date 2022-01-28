@@ -1,12 +1,11 @@
 import Radiya.Ipld.Utils
-import Radiya.Ipld.Multibase.Impl
+--import Radiya.Ipld.Multibase.Impl
 
 /-- An instance of the Multibase specification for a given base `β` -/
 class Multibase (β: Type) where
+  name         : String
   code         : Char
   alpha        : String
-  digit        : Nat → Char
-  read         : Char → Option Nat
   rfc4648      : Bool
   pad          : Bool
 
@@ -31,12 +30,12 @@ def group [Multibase β] : Nat :=
 -- This is a little slow. We gain some in-kernel performance by
 -- requiring Multibase instances to hardcode a `digit` function, even though
 -- semantically it's derivable from `alpha`
-def digit' [Multibase β] (i : Nat): Char :=
+def digit [Multibase β] (i : Nat): Char :=
   if i >= (alpha β).length then zero β else String.get (alpha β) i
 
 -- This is very slow because of the String.posOf call. We can't reduce
 -- encodings in-kernel unless we hardcode the `read` function in the instance
-def read' [Multibase β] (c: Char): Option Nat :=
+def read [Multibase β] (c: Char): Option Nat :=
  let x := String.posOf (alpha β) c
  if x == (alpha β).length then Option.none else Option.some x
 
@@ -203,186 +202,170 @@ structure Base64URL
 structure Base64URLPad
 
 instance : Multibase Base2 where
+  name := "base2"
   code := '0'
   alpha := "01"
-  digit := digitBase2
-  read := readBase2
   -- This seems not completely right given the multiformats base2 rfc
   rfc4648 := true
   pad := false
 
 instance : Multibase Base8 where
+  name := "base8"
   code := '7'
   alpha: String := "01234567"
-  digit := digitBase8
-  read := readBase8
   rfc4648 := true
   pad := false
 
 instance : Multibase Base10 where
+  name := "base10"
   code := '9'
   alpha: String := "0123456789"
-  digit := digitBase10
-  read := readBase10
   rfc4648 := false
   pad := false
 
 instance : Multibase Base16 where
+  name := "base16"
   code := 'f'
   alpha: String := "0123456789abcdef"
-  digit := digitBase16
-  read := readBase16
   rfc4648 := true
   pad := false
 
 instance : Multibase Base16Upper where
+  name := "base16upper"
   code := 'F'
   alpha: String := "0123456789ABCDEF"
-  digit := digitBase16Upper
-  read := readBase16
   rfc4648 := true
   pad := false
 
 instance : Multibase Base32Hex where
+  name := "base32hex"
   code := 'v'
   alpha: String := "0123456789abcdefghijklmnopqrstuv"
-  digit := digitBase32Hex
-  read := readBase32Hex
   rfc4648 := true
   pad := false
 
 instance : Multibase Base32HexUpper where
+  name := "base32hexupper"
   code := 'V'
   alpha: String := "0123456789ABCDEFGHIJKLMNOPQRSTUV"
-  digit := digitBase32HexUpper
-  read := readBase32Hex
   rfc4648 := true
   pad := false
 
 instance : Multibase Base32HexPad where
+  name := "base32hexpad"
   code := 't'
   alpha: String := "0123456789abcdefghijklmnopqrstuv"
-  digit := digitBase32Hex
-  read := readBase32Hex
   rfc4648 := true
   pad := true
 
 instance : Multibase Base32HexPadUpper where
+  name := "base32hexpadupper"
   code := 'T'
   alpha: String := "0123456789ABCDEFGHIJKLMNOPQRSTUV"
-  digit := digitBase32HexUpper
-  read := readBase32Hex
   rfc4648 := true
   pad := true
 
 instance : Multibase Base32 where
+  name := "base32"
   code := 'b'
   alpha: String := "abcdefghijklmnopqrstuvwxyz234567"
-  digit := digitBase32
-  read := readBase32
   rfc4648 := true
   pad := false
 
 instance : Multibase Base32Upper where
+  name := "base32upper"
   code := 'B'
   alpha: String := "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567"
-  digit := digitBase32Upper
-  read := readBase32
   rfc4648 := true
   pad := false
 
 instance : Multibase Base32Pad where
+  name := "base32pad"
   code := 'c'
   alpha: String := "abcdefghijklmnopqrstuvwxyz234567"
-  digit := digitBase32
-  read := readBase32
   rfc4648 := true
   pad := true
 
 instance : Multibase Base32PadUpper where
+  name := "base32padupper"
   code := 'C'
   alpha: String := "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567"
-  digit := digitBase32Upper
-  read := readBase32
   rfc4648 := true
   pad := true
 
 instance : Multibase Base32Z where
+  name := "base32z"
   code := 'h'
   alpha: String := "ybndrfg8ejkmcpqxot1uwisza345h769"
-  digit := digitBase32Z
-  read := readBase32Z
   rfc4648 := true
   pad := false
 
 instance : Multibase Base36 where
+  name := "base36"
   code := 'k'
   alpha: String := "0123456789abcdefghijklmnopqrstuvwxyz"
-  digit := digitBase36
-  read := readBase36
   rfc4648 := false
   pad := false
 
 instance : Multibase Base36Upper where
+  name := "base36upper"
   code := 'K'
   alpha: String := "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ"
-  digit := digitBase36Upper
-  read := readBase36
   rfc4648 := false
   pad := false
 
 instance : Multibase Base58Flickr where
+  name := "base58flickr"
   code := 'Z'
   alpha: String := 
     "123456789abcdefghijkmnopqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ"
-  digit := digitBase58Flickr
-  read := readBase58Flickr
   rfc4648 := false
   pad := false
 
 instance : Multibase Base58BTC where
+  name := "base58btc"
   code := 'z'
   alpha: String := 
     "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz"
-  digit := digitBase58BTC
-  read := readBase58BTC
   rfc4648 := false
   pad := false
 
 instance : Multibase Base64 where
+  name := "base64"
   code := 'm'
   alpha: String := 
     "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/"
-  digit := digitBase64
-  read := readBase64
   rfc4648 := true
   pad := false
 
 instance : Multibase Base64Pad where
+  name := "base64pad"
   code := 'M'
   alpha: String := 
     "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/"
-  digit := digitBase64
-  read := readBase64
   rfc4648 := true
   pad := true
 
 instance : Multibase Base64URL where
+  name := "base64url"
   code := 'u'
   alpha: String := 
     "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_"
-  digit := digitBase64URL
-  read := readBase64URL
   rfc4648 := true
   pad := false
 
 instance : Multibase Base64URLPad where
+  name := "base64urlpad"
   code := 'U'
   alpha: String := 
     "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_"
-  digit := digitBase64URL
-  read := readBase64URL
   rfc4648 := true
   pad := true
 
 end Multibase
+
+namespace Test
+
+open Multibase
+
+end Test
