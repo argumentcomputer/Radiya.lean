@@ -1,15 +1,28 @@
 namespace Optics
 universe u v
 
-def fromList (p : List (Type u)) : Type v := p.foldl (λ a b => a × b)
+@[specialize]
+def toProd (h : Type u) (p : List (Type u)) : Type u :=
+  match p with 
+  | [] => h
+  | n :: tail => h × toProd n tail
 
-structure Params (p q : List (Type u)) (a b s t : Type u) where
-  get : fromList (List.cons s p) → a
-  set : fromList (List.cons s p) × b → fromList (List.cons t q)
+@[specialize]
+def toForAll (h : Type u) (p : List (Type u)) : Type u :=
+  match p with 
+  | [] => h
+  | n :: tail => h → toForAll n tail
+
+
+structure Params (p q : List (Type u)) (a b s t : Type u) : Type u where
+  get : toProd s p → a
+  set : toProd s p × b → toProd t q
 
 /-
-A lens from a to b
+A lens from focus a to focus b with structure s and t before and after action.
 -/
-def Lens (a b s t : Type u) : Type v := Params [] []
+def Lens (a b s t : Type u) : Type u := Params [] [] a b s t
+
+def Lens' (s a : Type u) : Type u := Lens s s a a 
 
 end Optics
