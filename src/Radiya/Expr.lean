@@ -1,9 +1,6 @@
 import Radiya.Ipld.Cid
 import Radiya.Univ
 
-import Lean.Declaration
-open Lean (Literal)
-
 namespace Radiya
 
 abbrev Name := String
@@ -12,6 +9,16 @@ inductive DefinitionSafety where
   | safe
   | unsa
   | part
+  deriving Inhabited, BEq
+
+inductive Literal where
+  | natVal (val : Nat)
+  | strVal (val : String)
+  deriving Inhabited, BEq
+
+inductive LitType where
+  | natTyp
+  | strTyp
   deriving Inhabited, BEq
 
 inductive QuotKind where
@@ -110,6 +117,7 @@ mutual
   | pi    : Expr → Expr → Expr
   | letE  : Expr → Expr → Expr → Expr
   | lit   : Literal → Expr
+  | lty   : LitType → Expr
   | fix   : Expr → Expr
   deriving Inhabited
 end

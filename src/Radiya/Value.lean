@@ -2,8 +2,6 @@ import Radiya.Ipld.Cid
 import Radiya.Univ
 import Radiya.Expr
 
-open Lean (Literal QuotKind)
-
 namespace Radiya
 
 mutual
@@ -13,6 +11,7 @@ mutual
   | lam   : Expr → List (Thunk Value) → List Univ → Value
   | pi    : Thunk Value → Expr → List (Thunk Value) → List Univ → Value
   | lit   : Literal → Value
+  | lty   : LitType → Value
 
   -- Here variables also carry their types, but this is purely for an optimization
   -- in equal, so that it doesn't need to carry around a context of types
@@ -78,6 +77,7 @@ mutual
       Value.pi dom img env univs
     | Expr.sort univ => Value.sort (instantiateBulk univs univ)
     | Expr.lit lit => Value.lit lit
+    | Expr.lty lty => Value.lty lty
 end
 
 -- Assumes evaluated (delta-reduced) constants
@@ -114,6 +114,7 @@ mutual
     if isUnit lvl type || isProp lvl type then true else
     match term, term' with
     | Value.lit lit, Value.lit lit' => lit == lit'
+    | Value.lty lty, Value.lty lty' => lty == lty'
     | Value.sort u, Value.sort u' => equalUniv u u'
     | Value.pi dom img env univs, Value.pi dom' img' env' univs' =>
       let var := mkVar lvl dom
@@ -290,8 +291,10 @@ mutual
       infer ctx bod
     | Expr.fix _ =>
       CheckError.cannotInferFix
-    | Expr.lit _ => panic! "TODO"
-    | Expr.const .. => panic! "TODO"
+    | Expr.lit (Literal.natVal _) => Value.lty LitType.natTyp
+    | Expr.lit (Literal.strVal _) => Value.lty LitType.strTyp
+    | Expr.lty _ => Value.sort (Univ.succ Univ.zero)
+    | Expr.const k const_univs => eval (extractConstType k) [] (List.map (instantiateBulk ctx.univs) const_univs)
 end
 
 end Radiya
