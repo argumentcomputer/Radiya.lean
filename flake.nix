@@ -45,7 +45,7 @@
       in
       {
         inherit project test;
-        packages = {
+        packages = project // {
           ${name} = project.executable;
           test = test.executable;
         };
@@ -56,10 +56,10 @@
         devShell = pkgs.mkShell {
           inputsFrom = [ project.executable ];
           buildInputs = with pkgs; [
-            leanPkgs.lean
+            leanPkgs.lean-dev
           ];
-          LEAN_PATH = joinDepsDerivationns (d: d.modRoot);
-          LEAN_SRC_PATH = joinDepsDerivationns (d: d.src);
+          LEAN_PATH = "./src:./test:" + joinDepsDerivationns (d: d.modRoot);
+          LEAN_SRC_PATH = "./src:./test:" + joinDepsDerivationns (d: d.src);
         };
       });
 }
