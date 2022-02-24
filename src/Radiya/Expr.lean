@@ -76,9 +76,9 @@ structure InductiveC (Expr : Type) where
   is_nested : Bool
 
 structure RecursorRule (Expr : Type) where
-  ctor : Name
   nfields : Nat
   rhs : Expr
+  deriving Inhabited
 
 structure RecursorC (Expr : Type) where
   cid : Cid
@@ -86,7 +86,8 @@ structure RecursorC (Expr : Type) where
   type : Expr
   num_params : Nat
   num_indices : Nat
-  num_motives : Nat
+  -- TODO We will assume recursors with a single motive for now
+  -- num_motives : Nat
   num_minors : Nat
   rules : List (RecursorRule Expr)
   k : Bool

@@ -51,14 +51,34 @@ mutual
       | DefinitionSafety.unsa => panic! "Unsafe definition found"
     | _ => mkConst const univs
 
+  partial def applyConst (k : Const) (univs : List Univ) (arg : Thunk Value) (args : List (Thunk Value)) : Value :=
+  -- Assumes a partial application of k to args, which means in particular, that it is in normal form
+    match k with
+    | Const.recursor recur =>
+      -- TODO Here it is assumed that the number of motives is always 1
+      let major_idx := recur.num_params + recur.num_indices + recur.num_minors + 1
+      if args.length != major_idx then Value.app (Neutral.const k univs) (arg :: args)
+      else
+        match arg.get with
+        | Value.app (Neutral.const (Const.ctor ctor) _) args' =>
+          -- Since we assume expressions are previously type checked, we know that the constructor has to be
+          -- of the same inductive type as the recursor
+          let rule := recur.rules.get! ctor.ctor_idx
+          -- TODO nested inductive types, where the number of parameters in the constructor is different from
+          -- the number of parameters in the recursion rule
+          let env := List.append args' (List.drop recur.num_indices args)
+          eval rule.rhs env univs
+        | _ => Value.app (Neutral.const k univs) (arg :: args)
+    | _ => Value.app (Neutral.const k univs) (arg :: args)
+
   partial def eval (term : Expr) (env : Env) (univs : List Univ) : Value :=
     match term with
     | Expr.app fnc arg =>
-      let thunk := Thunk.mk (fun _ => eval arg env univs)
+      let arg_thunk := Thunk.mk (fun _ => eval arg env univs)
       match eval fnc env univs with
-      | Value.lam bod lam_env lam_univs => eval bod (thunk :: lam_env) lam_univs
-      | Value.app var@(Neutral.var ..) args => Value.app var (thunk :: args)
-      | Value.app (Neutral.const ..) _ => panic! "TODO"
+      | Value.lam bod lam_env lam_univs => eval bod (arg_thunk :: lam_env) lam_univs
+      | Value.app var@(Neutral.var ..) args => Value.app var (arg_thunk :: args)
+      | Value.app (Neutral.const k k_univs) args => applyConst k k_univs arg_thunk args
       -- Since terms are typed checked we know that any other case is impossible
       | _ => panic! "Impossible eval case"
     | Expr.lam _ bod => Value.lam bod env univs
