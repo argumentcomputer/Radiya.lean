@@ -55,18 +55,15 @@ mutual
   -- Assumes a partial application of k to args, which means in particular, that it is in normal form
     match k with
     | Const.recursor recur =>
-      -- TODO Here it is assumed that the number of motives is always 1
-      let major_idx := recur.num_params + recur.num_indices + recur.num_minors + 1
+      let major_idx := recur.num_params + recur.num_motives + recur.num_minors + recur.num_indices
       if args.length != major_idx then Value.app (Neutral.const k univs) (arg :: args)
       else
         match arg.get with
         | Value.app (Neutral.const (Const.ctor ctor) _) args' =>
-          -- Since we assume expressions are previously type checked, we know that the constructor has to be
-          -- of the same inductive type as the recursor
-          let rule := recur.rules.get! ctor.ctor_idx
-          -- TODO nested inductive types, where the number of parameters in the constructor is different from
-          -- the number of parameters in the recursion rule
-          let env := List.append args' (List.drop recur.num_indices args)
+          -- Since we assume expressions are previously type checked, we know that this constructor
+          -- must have an associated recursion rule
+          let rule := Option.get! (List.find? (fun r => r.ctor == ctor.cid) recur.rules)
+          let env := List.append (List.take rule.nfields args') (List.drop recur.num_indices args)
           eval rule.rhs env univs
         | _ => Value.app (Neutral.const k univs) (arg :: args)
     | _ => Value.app (Neutral.const k univs) (arg :: args)
