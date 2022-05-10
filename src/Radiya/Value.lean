@@ -190,20 +190,20 @@ mutual
       | _ => CheckError.notPi
     | Expr.lam dom bod => do
       match infer ctx dom with
-        | Value.sort u => pure ()
+        | .ok $ Value.sort u => pure ()
         | _ => CheckError.notTyp
       let dom := Thunk.mk (fun _ => eval dom ctx.env)
       let ctx := extCtx ctx (mkVar ctx.lvl) dom
       let bod_type ← infer ctx bod
       let img := quote ctx.lvl bod_type
-      Value.pi dom img ctx.env
+      return Value.pi dom img ctx.env
     | Expr.pi dom img  => do
       let dom_lvl ← match infer ctx dom with
-        | Value.sort u => pure u
+        | .ok $ Value.sort u => pure u
         | _ => CheckError.notTyp
       let ctx := extCtx ctx (mkVar ctx.lvl) (Thunk.mk (fun _ => eval dom ctx.env))
       let img_lvl ← match infer ctx img with
-        | Value.sort u => pure u
+        | .ok $ Value.sort u => pure u
         | _ => CheckError.notTyp
       pure (Value.sort (Univ.imax dom_lvl img_lvl))
     | Expr.letE typ exp bod => do

@@ -190,10 +190,10 @@ def read_str (len: Nat) : Deserializer String := do
   let bytes <- take len
   return String.fromUTF8Unchecked bytes
 
-def repeat {α : Type} (len : Nat) (d : Deserializer α) : Deserializer (List α) := 
+def repeat_for {α : Type} (len : Nat) (d : Deserializer α) : Deserializer (List α) :=
   match len with
   | 0 => return []
-  | n+1 => List.cons <$> d <*> repeat n d
+  | n+1 => List.cons <$> d <*> repeat_for n d
 
 partial def repeat_il {α : Type} (d : Deserializer α) : Deserializer (List α) := do
   let {bytes, pos} <- get
@@ -275,12 +275,12 @@ match major with
   -- Major type 4: array
   if 0x80 <= x && x <= 0x9b then do
     let len <- read_len (major.toNat - 0x80)
-    let arr <- repeat len deserialize_ipld
+    let arr <- repeat_for len deserialize_ipld
     return Ipld.array (Array.mk arr)
   -- Major type 5: map
   if 0xa0 <= x && x <= 0xbb then do
     let len <- read_len (major.toNat - 0xa0)
-    let list <- repeat len ((·,·) <$> decode_string <*> deserialize_ipld)
+    let list <- repeat_for len ((·,·) <$> decode_string <*> deserialize_ipld)
     return Ipld.mkObject list
   throw (DeserializeError.UnknownCborTag major)
 
@@ -359,4 +359,3 @@ def cid_ex_encoded : Array UInt8 := #[216, 42, 88, 37, 0, 1, 113, 22, 32, 69, 12
 #eval deserialize (serialize (Ipld.link cid_ex))
 
 end Test
-

@@ -19,24 +19,38 @@ A self-hosted Lean4 kernel with content-addressing
 
 ## Build
 
-- Install the [Nix package manager](https://nixos.org/download.html): `sh <(curl -L https://nixos.org/nix/install)
---daemon`
-- Install [direnv](https://direnv.net/): `nix-env -iA nixpkgs.direnv`
-- Hook direnv into your shell, by following these shell specific instructions: https://direnv.net/docs/hook.html. For example, in `zsh`, run `eval "$(direnv hook zsh)"`, or add that line to the end of your `~/.zshrc`
-- Install [nixFlakes](https://nixos.wiki/wiki/Flakes): `nix-env -iA nixpkgs.nixUnstable`
-- Enable nix flakes and commands.
-  - If you already have a `nix.conf`, add `experimental-features = nix-command flakes` to `~/.config/nix/nix.conf`.
-  - If you don't have a `nix.conf`: `mkdir -p ~/.config/nix && echo "experimental-features = nix-command flakes" > ~/.config/nix/nix.conf`.
-- Clone this repo: `git clone https://github.com/yatima-inc/Radiya.lean.git`
-- `cd` into that directory: `cd ~/Radiya.lean` if that's where you cloned it.
-- Enable direnv: `direnv allow`
-- Build Radiya: `nix build` (This might take a while the first time you run it)
+### Building with Lake
 
-If you want to develop on Radiya, make sure you start your editor from a command
-prompt in with Radiya.lean as the working directory, so that direnv can ensure
-your environment correctly integrates with Lean editor plugins.
+Run `lake build` in the root directory of this repo.
+
+### Building with Nix
+
+First, setup Nix
+
+1. Install the [Nix package manager](https://nixos.org/download.html): `sh <(curl -L https://nixos.org/nix/install)
+--daemon`
+2. Install [direnv](https://direnv.net/): `nix-env -iA nixpkgs.direnv`
+3. Hook direnv into your shell, by following these shell specific instructions: https://direnv.net/docs/hook.html. For example, in `zsh`, run `eval "$(direnv hook zsh)"`, or add that line to the end of your `~/.zshrc`
+4. Install [nixFlakes](https://nixos.wiki/wiki/Flakes): `nix-env -iA nixpkgs.nixUnstable`
+5. Enable nix flakes and commands.
+  - If you already have a `nix.conf`, add `experimental-features = nix-command flakes` to `~/.config/nix/nix.conf`.
+  - If you don't have a `nix.conf`: `mkdir -p ~/.config/nix && echo "experimental-features = nix-command flakes" > ~/.config/nix/nix.conf`
+
+Now, in the root directory of this repo:
+
+1. Enable direnv with `direnv allow`
+2. Build Radiya with `nix build`
 
 For building on M1 MacOS, please see further information [here](/Build_on_M1_MacOS.md).
 
+## Develop
 
+If you want to develop on Radiya, make sure you start your editor from a command
+prompt in the root directory of the cloned repository so the Lean editor plugins
+will trigger properly.
 
+### Updating the Lean toolchain
+
+When updating the `lean-toolchain` file to a more recent version, please make
+sure to update the `flake.lock` file as well. This can be done with the command
+`nix flake update`.
