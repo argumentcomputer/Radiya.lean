@@ -48,3 +48,9 @@ For building on M1 MacOS, please see further information [here](/Build_on_M1_Mac
 If you want to develop on Radiya, make sure you start your editor from a command
 prompt in the root directory of the cloned repository so the Lean editor plugins
 will trigger properly.
+
+### Updating the Lean toolchain
+
+When updating the `lean-toolchain` file to a more recent version, please make
+sure to update the `flake.lock` file as well. This can be done with the command
+`nix flake update`.
