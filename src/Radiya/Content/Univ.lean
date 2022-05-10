@@ -26,7 +26,7 @@ instance : ToIpld Univ where
   | Univ.param i  => array #[number UNIV, number 4, toIpld i]
 
   fromIpld
-  | array #[number UNIV, number 0]       => Univ.zero
+  | array #[number UNIV, number 0]       => return Univ.zero
   | array #[number UNIV, number 1, p]    => Univ.succ <$> fromIpld p
   | array #[number UNIV, number 2, x, y] => Univ.max <$> fromIpld x <*> fromIpld y
   | array #[number UNIV, number 3, x, y] => Univ.imax <$> fromIpld x <*> fromIpld y
@@ -49,7 +49,7 @@ instance : ToIpld UnivMeta where
   | UnivMeta.param n  => Ipld.array #[Ipld.number UNIVMETA, Ipld.number 4, toIpld n]
 
   fromIpld
-  | array #[number UNIVMETA, number 0]       => UnivMeta.zero
+  | array #[number UNIVMETA, number 0]       => return UnivMeta.zero
   | array #[number UNIVMETA, number 1, p]    => UnivMeta.succ <$> fromIpld p
   | array #[number UNIVMETA, number 2, x, y] => UnivMeta.max <$> fromIpld x <*> fromIpld y
   | array #[number UNIVMETA, number 3, x, y] => UnivMeta.imax <$> fromIpld x <*> fromIpld y

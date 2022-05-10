@@ -31,13 +31,13 @@ def group [Multibase β] : Nat :=
 -- requiring Multibase instances to hardcode a `digit` function, even though
 -- semantically it's derivable from `alpha`
 def digit [Multibase β] (i : Nat): Char :=
-  if i >= (alpha β).length then zero β else String.get (alpha β) i
+  if i >= (alpha β).length then zero β else String.get (alpha β) ⟨i⟩
 
 -- This is very slow because of the String.posOf call. We can't reduce
 -- encodings in-kernel unless we hardcode the `read` function in the instance
 def read [Multibase β] (c: Char): Option Nat :=
  let x := String.posOf (alpha β) c
- if x == (alpha β).length then Option.none else Option.some x
+ if x == (alpha β).endPos then none else some x.byteIdx
 
 def validDigit [Multibase β] (x: Char): Bool := (read β x) != Option.none
 def validate [Multibase β] (x: String): Bool := List.all x.data (validDigit β)

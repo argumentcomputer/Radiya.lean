@@ -19,6 +19,12 @@ A self-hosted Lean4 kernel with content-addressing
 
 ## Build
 
+### Building with Lake
+
+Run `lake build` in the root directory of this repo.
+
+### Building with Nix
+
 - Install the [Nix package manager](https://nixos.org/download.html): `sh <(curl -L https://nixos.org/nix/install)
 --daemon`
 - Install [direnv](https://direnv.net/): `nix-env -iA nixpkgs.direnv`
@@ -32,11 +38,4 @@ A self-hosted Lean4 kernel with content-addressing
 - Enable direnv: `direnv allow`
 - Build Radiya: `nix build` (This might take a while the first time you run it)
 
-If you want to develop on Radiya, make sure you start your editor from a command
-prompt in with Radiya.lean as the working directory, so that direnv can ensure
-your environment correctly integrates with Lean editor plugins.
-
 For building on M1 MacOS, please see further information [here](/Build_on_M1_MacOS.md).
-
-
-
