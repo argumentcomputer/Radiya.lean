@@ -54,3 +54,14 @@ will trigger properly.
 When updating the `lean-toolchain` file to a more recent version, please make
 sure to update the `flake.lock` file as well. This can be done with the command
 `nix flake update`.
+
+### Testing
+
+This is done by a Lake script that runs each Lean file in [`test/in`](test/in)
+and compares the output with the respective file in [`test/out`](test/out).
+
+The script is capable of matching nested directories, such that for a given
+`test/in/foo/bar.lean` it will look for a `test/out/foo/bar.out` to serve as the
+reference for the expected output.
+
+Run the tests with `lake script run tests`.
