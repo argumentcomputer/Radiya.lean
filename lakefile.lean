@@ -6,7 +6,7 @@ package Radiya {
   binRoot := "Radiya"
 }
 
-def radiyaLibPath : FilePath := defaultBuildDir / defaultLibDir
+def radiyaLibPath : String := toString $ defaultBuildDir / defaultLibDir
 
 inductive Result
   | success : String → Result
@@ -16,7 +16,7 @@ def runTest (testFilePath : FilePath) : IO Result := do
   let testProcessOutput ← IO.Process.output {
     cmd := "lean"
     args := #[testFilePath.toString]
-    env := #[("LEAN_PATH", toString radiyaLibPath)]
+    env := #[("LEAN_PATH", radiyaLibPath)]
   }
   if testProcessOutput.exitCode == 0 then
     return .success testProcessOutput.stdout
