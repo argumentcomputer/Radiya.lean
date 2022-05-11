@@ -56,7 +56,7 @@ script tests do
             s!"· Result:\n{testResultContent}"
           return (1 : UInt32)
       | .failure s =>
-        IO.eprintln s!"Filed to run {testIn} with the error:\n{s}"
+        IO.eprintln s!"Failed to run {testIn} with the error:\n{s}"
         return 1
     else
       IO.eprintln s!"Failed to find {testOut}"
